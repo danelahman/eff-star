@@ -1,0 +1,172 @@
+module Eff
+
+module S = Eff.Signature
+
+(* Computation tree representation of the Eff effect *)
+
+noeq type eff_repr (a:Type) (ops:S.sig) =
+  | Leaf : a 
+         -> eff_repr a ops
+  | Node : op:S.op
+         -> #squash(op `S.mem` ops)
+         -> S.param_of op 
+         -> (S.arity_of op -> eff_repr a ops)
+         -> eff_repr a ops
+
+
+(* Monadic operators on the Eff effect *)
+
+let eff_return a x 
+  : eff_repr a S.emp
+  = Leaf x
+
+let rec eff_subcomp a #ops1 #ops2
+  (t:eff_repr a ops1)
+  : Pure (eff_repr a ops2)
+         (requires (ops1 `S.sub` ops2))
+         (ensures (fun _ -> True))
+  = match t with
+    | Leaf x -> Leaf x
+    | Node op x k -> 
+        Node op x 
+          (fun y -> FStar.WellFounded.axiom1 k y; eff_subcomp a (k y))
+        
+let rec eff_bind a b #ops1 #ops2
+  (#[@@ ()] u:squash(ops1 `S.compat_with` ops2))
+  (t1:eff_repr a ops1) 
+  (t2:a -> eff_repr b ops2) 
+  : eff_repr b (ops1 `S.union` ops2)
+  = match t1 with
+    | Leaf x -> eff_subcomp b (t2 x)
+    | Node op x k -> 
+        Node op x 
+          (fun y -> FStar.WellFounded.axiom1 k y; eff_bind a b (k y) t2)
+
+let eff_if_then_else a #ops1 #ops2
+  (#[@@ ()] u:squash(ops1 `S.compat_with` ops2))
+  (f:eff_repr a ops1)
+  (g:eff_repr a ops2)
+  (b:bool)
+  : Type
+  = eff_repr a (ops1 `S.union` ops2)
+
+
+(* The Eff effect *)
+
+[@@allow_informative_binders]
+total
+reifiable
+reflectable
+layered_effect {
+  Eff : a:Type -> S.sig -> Effect
+  with
+  repr         = eff_repr;
+  return       = eff_return;
+  bind         = eff_bind;
+  subcomp      = eff_subcomp;
+  if_then_else = eff_if_then_else
+}
+
+
+(* Lifting of pure computations into the Eff effect *)
+
+let lift_pure_eff a wp
+  (f:eqtype_as_type unit -> PURE a wp)
+  : Pure (eff_repr a S.emp)
+         (requires (wp (fun _ -> True)))
+         (ensures (fun _ -> True))
+  = FStar.Monotonic.Pure.wp_monotonic_pure ();
+    Leaf (f ())
+
+sub_effect PURE ~> Eff = lift_pure_eff
+
+
+(* Performing an algebraic effect *)
+
+let perform (op:S.op) (x:S.param_of op) 
+  : Eff (S.arity_of op) (S.singleton op) 
+  = Eff?.reflect (Node op x (fun y -> Leaf y))
+
+
+(* Handler type *)
+
+let eff_handler (ops:S.sig) (a:Type) (ops':S.sig) = 
+  op:S.op{op `S.mem` ops} -> S.param_of op -> (S.arity_of op -> eff_repr a ops') -> eff_repr a ops'
+
+let handler (ops:S.sig) (a:Type) (ops':S.sig) = 
+  op:S.op{op `S.mem` ops} -> S.param_of op -> (S.arity_of op -> Eff a ops') -> Eff a ops'
+
+let to_eff_handler #ops #a #ops'
+  (h:handler ops a ops')
+  : eff_handler ops a ops'
+  = fun op x k -> 
+      eff_subcomp a 
+        #(Eff.Signature.union Eff.Signature.emp 
+           (Eff.Signature.union Eff.Signature.emp ops')) #_ 
+        (reify (h op x (fun y -> Eff?.reflect (k y))))
+
+
+(* Effect handler *)
+
+let rec eff_handle #a #b #ops #ops'
+  (t:eff_repr a ops)
+  (h:eff_handler ops b ops')
+  (k:a -> eff_repr b ops')
+  : eff_repr b ops'
+  = match t with
+    | Leaf x -> k x
+    | Node op x l -> 
+        h op x (fun y -> 
+          FStar.WellFounded.axiom1 l y; 
+          eff_handle (l y) h k)
+
+let handle #a #b #ops #ops'
+  (f:unit -> Eff a ops)
+  (h:handler ops b ops')
+  (k:a -> Eff b ops')
+  : Eff b ops'
+  = Eff?.reflect (
+      eff_handle 
+        (reify (f ()))
+        (to_eff_handler h)
+        (fun x -> reify (k x)))
+
+
+
+
+(* ********************************************** *)
+
+(*
+let read = S.Op "read" unit nat
+let write = S.Op "write" nat unit
+
+let r : S.sig = S.singleton read
+let w : S.sig = S.singleton write
+let rw : S.sig = r `S.union` w
+
+let bar1 () : Eff nat rw =
+  perform write 42;
+  perform read ()
+
+let foo1 (c:unit -> Eff nat S.emp) : Eff nat rw =
+  c ()
+
+let foo2 (c:unit -> Eff nat rw) : Eff nat rw =
+  let v = c () in
+  v
+
+let foo3 (c1:unit -> Eff nat rw) 
+         (c2:unit -> Eff nat rw) 
+       : Eff nat rw =
+  let v = c1 () in
+  let w = c2 () in
+  v + w
+
+let foo4 (b:bool) 
+         (c1:unit -> Eff nat S.emp) 
+         (c2:unit -> Eff nat rw) 
+       : Eff nat rw =
+  if b then c1 () else c2 ()
+*)
+
+(* ********************************************** *)
