@@ -30,17 +30,18 @@ let test3 (b:bool)
   let v = (if b then c1 () else c2 ()) in
   perform read ()
 
-open FStar.Tactics
-
-let dup_write_handler #a
-  : handler rw a rw
+let eff_discard_write_handler #a
+  : eff_handler rw a rw
   = fun op x k -> 
       match op with
       | S.Op "read" -> 
-          assert (op == S.Op "read" #unit #int) by (dump "foo");
-          let y = perform op x in
-          k y
+          Node op x (fun y -> k y)
       | S.Op "write" ->
-          let _ = perform op x in
-          let y = perform op x in
-          k y
+          k ()
+
+let discard_write_handler #a
+  : handler rw a rw
+  = fun op x k ->
+      Eff?.reflect (
+        eff_discard_write_handler #a op x 
+          (fun y -> reify (k y)))
