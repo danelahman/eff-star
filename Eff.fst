@@ -105,6 +105,11 @@ let to_eff_handler #ops #a #ops'
            (Eff.Signature.union Eff.Signature.emp ops')) #_ 
         (reify (h op x (fun y -> Eff?.reflect (k y))))
 
+let to_handler  #ops #a #ops'
+  (h:eff_handler ops a ops')
+  : handler ops a ops'
+  = fun op x k -> 
+      Eff?.reflect (h op x (fun y -> reify (k y)))
 
 (* Effect handler *)
 
