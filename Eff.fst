@@ -30,7 +30,7 @@ let rec eff_subcomp a #ops1 #ops2
     | Node op x k -> 
         Node op x 
           (fun y -> FStar.WellFounded.axiom1 k y; eff_subcomp a (k y))
-        
+
 let rec eff_bind a b #ops1 #ops2
   (#[@@ ()] u:squash(ops1 `S.compat_with` ops2))
   (t1:eff_repr a ops1) 
@@ -101,8 +101,7 @@ let to_eff_handler #ops #a #ops'
   : eff_handler ops a ops'
   = fun op x k -> 
       eff_subcomp a 
-        #(Eff.Signature.union Eff.Signature.emp 
-           (Eff.Signature.union Eff.Signature.emp ops')) #_ 
+        #(S.union S.emp (S.union S.emp ops')) #_ 
         (reify (h op x (fun y -> Eff?.reflect (k y))))
 
 let to_handler  #ops #a #ops'
