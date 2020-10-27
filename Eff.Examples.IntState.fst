@@ -16,23 +16,80 @@ let rw : S.sig = r `S.union` w
 
 (* Some examples of using algebraic operations *)
 
-let ex1 () : Eff int rw =
+let ex1 () : Eff int rw=
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
+  perform write 42; let _ = perform read () in
   perform write 42;
   perform read ()
 
 let ex2 (c1:unit -> Eff int S.emp) 
-          (c2:unit -> Eff int rw) 
+        (c2:unit -> Eff int rw) 
         : Eff int rw =
-  let v = c1 () in
+  let v = (c1 () <: Eff int rw) in
   let w = c2 () in
   v + w
 
 let ex3 (b:bool) 
-          (c1:unit -> Eff int rw) 
-          (c2:unit -> Eff int S.emp) 
+        (c1:unit -> Eff int rw) 
+        (c2:unit -> Eff int S.emp) 
         : Eff int rw =
   perform write 42;
-  let v = (if b then c1 () else c2 ()) in
+  let v = (if b then c1 () else (c2 () <: Eff int rw)) in
   perform read ()
 
 

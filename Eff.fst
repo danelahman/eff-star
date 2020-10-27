@@ -16,9 +16,19 @@ noeq type eff_repr (a:Type) (ops:S.sig) =
 
 (* Monadic operators on the Eff effect *)
 
-let eff_return a x 
-  : eff_repr a S.emp
+let eff_return a x #ops
+  : eff_repr a ops
   = Leaf x
+
+let rec eff_bind a b #ops
+  (t1:eff_repr a ops) 
+  (t2:a -> eff_repr b ops) 
+  : eff_repr b ops
+  = match t1 with
+    | Leaf x -> t2 x
+    | Node op x k -> 
+        Node op x 
+          (fun y -> FStar.WellFounded.axiom1 k y; eff_bind a b (k y) t2)
 
 let rec eff_subcomp a #ops1 #ops2
   (t:eff_repr a ops1)
@@ -31,24 +41,19 @@ let rec eff_subcomp a #ops1 #ops2
         Node op x 
           (fun y -> FStar.WellFounded.axiom1 k y; eff_subcomp a (k y))
 
-let rec eff_bind a b #ops1 #ops2
-  (#[@@ ()] u:squash(ops1 `S.compat_with` ops2))
-  (t1:eff_repr a ops1) 
-  (t2:a -> eff_repr b ops2) 
-  : eff_repr b (ops1 `S.union` ops2)
-  = match t1 with
-    | Leaf x -> eff_subcomp b (t2 x)
-    | Node op x k -> 
-        Node op x 
-          (fun y -> FStar.WellFounded.axiom1 k y; eff_bind a b (k y) t2)
-
-let eff_if_then_else a #ops1 #ops2
-  (#[@@ ()] u:squash(ops1 `S.compat_with` ops2))
-  (f:eff_repr a ops1)
-  (g:eff_repr a ops2)
+let eff_if_then_else a #ops
+  (f:eff_repr a ops)
+  (g:eff_repr a ops)
   (b:bool)
   : Type
-  = eff_repr a (ops1 `S.union` ops2)
+  = eff_repr a ops
+
+
+let eff_perform #ops
+  (op:S.op{op `S.mem` ops})
+  (x:S.param_of op)
+  : eff_repr (S.arity_of op) ops 
+  = Node op x (fun y -> Leaf y)
 
 
 (* The Eff effect *)
@@ -64,15 +69,16 @@ layered_effect {
   return       = eff_return;
   bind         = eff_bind;
   subcomp      = eff_subcomp;
-  if_then_else = eff_if_then_else
+  if_then_else = eff_if_then_else;
+  perform      = eff_perform
 }
 
 
 (* Lifting of pure computations into the Eff effect *)
 
-let lift_pure_eff a wp
+let lift_pure_eff a wp ops
   (f:eqtype_as_type unit -> PURE a wp)
-  : Pure (eff_repr a S.emp)
+  : Pure (eff_repr a ops)
          (requires (wp (fun _ -> True)))
          (ensures (fun _ -> True))
   = FStar.Monotonic.Pure.wp_monotonic_pure ();
@@ -83,9 +89,9 @@ sub_effect PURE ~> Eff = lift_pure_eff
 
 (* Performing an algebraic effect *)
 
-let perform (op:S.op) (x:S.param_of op) 
-  : Eff (S.arity_of op) (S.singleton op) 
-  = Eff?.reflect (Node op x (fun y -> Leaf y))
+let perform #ops (op:S.op{op `S.mem` ops}) (x:S.param_of op) 
+  : Eff (S.arity_of op) ops 
+  = Eff?.perform op x
 
 
 (* Handler type *)
@@ -99,10 +105,8 @@ let handler (ops:S.sig) (a:Type) (ops':S.sig) =
 let to_eff_handler #ops #a #ops'
   (h:handler ops a ops')
   : eff_handler ops a ops'
-  = fun op x k -> 
-      eff_subcomp a 
-        #(S.union S.emp (S.union S.emp ops')) #_ 
-        (reify (h op x (fun y -> Eff?.reflect (k y))))
+  = fun op x k ->  
+      (reify (h op x (fun y -> Eff?.reflect (k y))))
 
 let to_handler  #ops #a #ops'
   (h:eff_handler ops a ops')
