@@ -179,3 +179,32 @@ let st_handle2 #a (f:unit -> Eff a rw)
 let st_handle2' #a (f:unit -> Eff a rw) 
   : int -> a * int
   = emp_pure (fun _ -> st_handle2 f)
+
+
+(* Experimenting with equations *)
+
+let f (z:unit -> eff_repr int rw) 
+  : Pure unit 
+         (requires (
+           forall x (z:unit -> eff_repr int rw) . {:pattern (Node write x z)} Node write x z == z ()))
+         (ensures (fun _ ->
+           Node write 42 z == Node write 24 z))
+  = admit ()
+  
+assume val write_ignore (x:int) (z:unit -> eff_repr int rw)
+  : Lemma (Node write x z == z ())
+          [SMTPat (Node write x z)]
+
+let g (z:unit -> eff_repr int rw) 
+  : Lemma (Node write 42 z == Node write 24 z)
+  = admit ()
+
+let g' (z:unit -> eff_repr int rw) 
+  : Lemma (Node write 42 z == Node write 24 z)
+  = write_ignore 42 z;
+    write_ignore 24 z
+
+let g'' (z:unit -> eff_repr int rw) 
+  : Lemma (Node read () (fun _ -> Node write 42 z) == Node read () (fun _ -> Node write 24 z))
+  = write_ignore 42 z;
+    write_ignore 24 z
