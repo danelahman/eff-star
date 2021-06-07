@@ -125,13 +125,6 @@ let dup_write_handler #a
 
 (* Logging reads (via writes) *)
 
-let eff_log_read_handler #a
-  : eff_handler r a rw
-  = fun op x k -> 
-      match op with
-      | S.Op "read" -> 
-          Node read () (fun y -> Node write y (fun _ -> k y))
-
 let log_read_handler #a
   : handler r a rw
   = fun op x k -> 
