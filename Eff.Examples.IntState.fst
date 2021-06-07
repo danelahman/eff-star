@@ -16,7 +16,7 @@ let rw : S.sig = r `S.union` w
 
 (* Some examples of using algebraic operations *)
 
-let ex1 () : Eff int rw=
+let ex1 () : Eff int rw =
   perform write 42; let _ = perform read () in
   perform write 42; let _ = perform read () in
   perform write 42; let _ = perform read () in
@@ -76,7 +76,7 @@ let ex1 () : Eff int rw=
   perform write 42; let _ = perform read () in
   perform write 42;
   perform read ()
-
+  
 let ex2 (c1:unit -> Eff int S.emp) 
         (c2:unit -> Eff int rw) 
         : Eff int rw =
@@ -93,43 +93,37 @@ let ex3 (b:bool)
   perform read ()
 
 
-(* Some examples of handlers *)
-
-(* Currently clunkier than desired, because the     *)
-(* operation cases need to be defined on the repr   *)
-(* when handling into a layered effect (e.g., Eff). *)
+(* Some examples of effect handlers for {r,w,rw} signatures *)
 
 (* Discarding the write operation *)
 
-let eff_discard_write_handler #a
-  : eff_handler rw a r
-  = fun op x k -> 
-      match op with
-      | S.Op "read" -> 
-          Node read () (fun y -> k y)
-      | S.Op "write" ->
-          k ()
-
 let discard_write_handler #a
   : handler rw a r
-  = to_handler eff_discard_write_handler
+  = fun op x k ->
+      match op with
+      | S.Op "read" -> 
+          let x = perform read () in
+          k x
+      | S.Op "write" -> 
+          k ()
+
 
 (* Duplicating the write operation *)
 
-let eff_dup_write_handler #a
-  : eff_handler rw a rw
+let dup_write_handler #a
+  : handler rw a rw
   = fun op x k -> 
       match op with
       | S.Op "read" -> 
-          Node read () (fun y -> k y)
+          let x = perform read () in 
+          k x
       | S.Op "write" ->
-          Node write x (fun _ -> Node write x (fun _ -> k ()))
+          perform write x;
+          perform write x;
+          k ()
 
-let dup_write_handler #a
-  : handler rw a rw
-  = to_handler eff_dup_write_handler
 
-(* Logging reads (via write) *)
+(* Logging reads (via writes) *)
 
 let eff_log_read_handler #a
   : eff_handler r a rw
@@ -140,19 +134,55 @@ let eff_log_read_handler #a
 
 let log_read_handler #a
   : handler r a rw
-  = to_handler eff_log_read_handler
+  = fun op x k -> 
+      match op with
+      | S.Op "read" -> 
+          let x = perform read () in
+          perform write x;
+          k x
 
-(* The standard state handler *)
 
-let eff_st_handler #a
-  : eff_handler rw (int -> a * int) S.emp
+(* The standard state handler (in two flavours) *)
+
+(* Returning stateful functions in the Eff effect to make effects match up in `let`s *)
+let st_handler1 #a
+  : handler rw (int -> Eff (a * int) S.emp) S.emp
   = fun op x k ->
       match op with
       | S.Op "read" -> 
-          Leaf (fun s -> let (Leaf f) = k s in f s)
+          fun s -> let f = k s in f s
       | S.Op "write" ->
-          Leaf (fun _ -> let (Leaf f) = k () in f x)
+          fun s -> let f = k () in f x
 
-let st_handler #a
+(* Using explicit coercions between `Eff a S.emp` and `Tot a` *)
+let st_handler2 #a
   : handler rw (int -> a * int) S.emp
-  = to_handler eff_st_handler
+  = fun op x k ->
+      match op with
+      | S.Op "read" -> 
+          fun s -> let f = emp_pure (fun _ -> k s) in f s
+      | S.Op "write" ->
+          fun s -> let f = emp_pure (fun x -> k x) in f x
+
+
+(* Handling code *)
+
+let st_handle1 #a (f:unit -> Eff a rw) 
+  : Eff (int -> Eff (a * int) S.emp) S.emp
+  = handle f st_handler1 (fun x s -> x , s)
+
+let st_handle1' #a (f:unit -> Eff a rw) 
+  : Eff (int -> a * int) S.emp
+  = fun s -> emp_pure (fun _ -> st_handle1 f s)
+
+let st_handle1'' #a (f:unit -> Eff a rw) 
+  : int -> a * int
+  = emp_pure (fun _ -> st_handle1' f)
+
+let st_handle2 #a (f:unit -> Eff a rw) 
+  : Eff (int -> a * int) S.emp
+  = handle f st_handler2 (fun x s -> x , s)
+
+let st_handle2' #a (f:unit -> Eff a rw) 
+  : int -> a * int
+  = emp_pure (fun _ -> st_handle2 f)

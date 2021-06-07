@@ -28,7 +28,7 @@ let rec eff_bind a b #ops
     | Leaf x -> t2 x
     | Node op x k -> 
         Node op x 
-          (fun y -> FStar.WellFounded.axiom1 k y; eff_bind a b (k y) t2)
+          (fun y -> eff_bind a b (k y) t2)
 
 let rec eff_subcomp a #ops1 #ops2
   (t:eff_repr a ops1)
@@ -39,7 +39,7 @@ let rec eff_subcomp a #ops1 #ops2
     | Leaf x -> Leaf x
     | Node op x k -> 
         Node op x 
-          (fun y -> FStar.WellFounded.axiom1 k y; eff_subcomp a (k y))
+          (fun y -> eff_subcomp a (k y))
 
 let eff_if_then_else a #ops
   (f:eff_repr a ops)
@@ -81,11 +81,21 @@ let lift_pure_eff a wp ops
   : Pure (eff_repr a ops)
          (requires (wp (fun _ -> True)))
          (ensures (fun _ -> True))
-  = FStar.Monotonic.Pure.wp_monotonic_pure ();
+  = FStar.Monotonic.Pure.elim_pure_wp_monotonicity wp;
     Leaf (f ())
 
 sub_effect PURE ~> Eff = lift_pure_eff
 
+
+(* Empty signature computations are pure *)
+
+let eff_emp_pure #a (c:unit -> eff_repr a S.emp) : a 
+  = match c () with
+    | Leaf x -> x
+  
+let emp_pure #a (c:unit -> Eff a S.emp) : a 
+  = eff_emp_pure (fun x -> reify (c ()))
+  
 
 (* Performing an algebraic effect *)
 
@@ -94,7 +104,7 @@ let perform #ops (op:S.op{op `S.mem` ops}) (x:S.param_of op)
   = Eff?.perform op x
 
 
-(* Handler type *)
+(* Effect handlers *)
 
 let eff_handler (ops:S.sig) (a:Type) (ops':S.sig) = 
   op:S.op{op `S.mem` ops} -> S.param_of op -> (S.arity_of op -> eff_repr a ops') -> eff_repr a ops'
@@ -102,19 +112,17 @@ let eff_handler (ops:S.sig) (a:Type) (ops':S.sig) =
 let handler (ops:S.sig) (a:Type) (ops':S.sig) = 
   op:S.op{op `S.mem` ops} -> S.param_of op -> (S.arity_of op -> Eff a ops') -> Eff a ops'
 
+let reflect_cont #a #b #ops (k:b -> eff_repr a ops) (y:b) : Eff a ops
+  = Eff?.reflect (k y)
+
 let to_eff_handler #ops #a #ops'
   (h:handler ops a ops')
   : eff_handler ops a ops'
   = fun op x k ->  
-      (reify (h op x (fun y -> Eff?.reflect (k y))))
+      (reify (h op x (reflect_cont k))) 
+      
 
-let to_handler  #ops #a #ops'
-  (h:eff_handler ops a ops')
-  : handler ops a ops'
-  = fun op x k -> 
-      Eff?.reflect (h op x (fun y -> reify (k y)))
-
-(* Effect handler *)
+(* Effect handling *)
 
 let rec eff_handle #a #b #ops #ops'
   (t:eff_repr a ops)
@@ -125,7 +133,6 @@ let rec eff_handle #a #b #ops #ops'
     | Leaf x -> k x
     | Node op x l -> 
         h op x (fun y -> 
-          FStar.WellFounded.axiom1 l y; 
           eff_handle (l y) h k)
 
 let handle #a #b #ops #ops'
