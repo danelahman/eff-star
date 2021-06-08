@@ -4,15 +4,16 @@ module S = Eff.Signature
 
 (* Computation tree representation of the Eff effect *)
 
-noeq type eff_repr (a:Type) (ops:S.sig) =
+noeq type eff_repr' (a:Type u#u) (ops:S.sig) =
   | Leaf : a 
-         -> eff_repr a ops
+         -> eff_repr' a ops
   | Node : op:S.op
          -> #squash(op `S.mem` ops)
          -> S.param_of op 
-         -> (S.arity_of op -> eff_repr a ops)
-         -> eff_repr a ops
+         -> (S.arity_of op -> eff_repr' a ops)
+         -> eff_repr' a ops
 
+let eff_repr a ops = eff_repr' a ops
 
 (* Monadic operators on the Eff effect *)
 
@@ -40,14 +41,14 @@ let rec eff_subcomp a #ops1 #ops2
     | Node op x k -> 
         Node op x 
           (fun y -> eff_subcomp a (k y))
-
+(*
 let eff_if_then_else a #ops
   (f:eff_repr a ops)
   (g:eff_repr a ops)
   (b:bool)
   : Type
   = eff_repr a ops
-
+*)
 
 let eff_perform #ops
   (op:S.op{op `S.mem` ops})
@@ -55,7 +56,7 @@ let eff_perform #ops
   : eff_repr (S.arity_of op) ops 
   = Node op x (fun y -> Leaf y)
 
-
+(*
 (* The Eff effect *)
 
 [@@allow_informative_binders]
@@ -72,7 +73,7 @@ layered_effect {
   if_then_else = eff_if_then_else;
   perform      = eff_perform
 }
-
+*)
 
 (* Lifting of pure computations into the Eff effect *)
 
@@ -84,8 +85,9 @@ let lift_pure_eff a wp ops
   = FStar.Monotonic.Pure.elim_pure_wp_monotonicity wp;
     Leaf (f ())
 
+(*
 sub_effect PURE ~> Eff = lift_pure_eff
-
+*)
 
 (* Empty signature computations are pure *)
 
@@ -108,10 +110,10 @@ let perform #ops (op:S.op{op `S.mem` ops}) (x:S.param_of op)
 
 let eff_handler (ops:S.sig) (a:Type) (ops':S.sig) = 
   op:S.op{op `S.mem` ops} -> S.param_of op -> (S.arity_of op -> eff_repr a ops') -> eff_repr a ops'
-
+(*
 let handler (ops:S.sig) (a:Type) (ops':S.sig) = 
   op:S.op{op `S.mem` ops} -> S.param_of op -> (S.arity_of op -> Eff a ops') -> Eff a ops'
-
+*)
 let reflect_cont #a #b #ops (k:b -> eff_repr a ops) (y:b) : Eff a ops
   = Eff?.reflect (k y)
 
