@@ -24,16 +24,13 @@ unfold
 let eq2 a x y (z:unit -> template_repr a) 
   = node write x z == node write y z
 
-let f (z:unit -> template_repr int) 
+assume val t : Type
+
+let f (z:unit -> template_repr t) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures (fun _ -> node write 42 z == node write 24 z)) 
   = ()
-
-let lhs (#a:Type) (t:template_repr a) : template_repr a = t
-
-let rhs (#a:Type) (t:template_repr a) : template_repr a = t
-
 
 // Allows SMT to prove the equations below, but those
 // automatic proofs seem to be heavily dependent on
@@ -41,9 +38,9 @@ let rhs (#a:Type) (t:template_repr a) : template_repr a = t
 // doesn't allow SMT to prove the equations below.
 let read_ext a (z1 z2:int -> template_repr a)
   : Lemma (requires (F.feq #int z1 z2))
-          (ensures  (lhs (node read () (F.on_domain int z1)) == rhs (node read () (F.on_domain int z2))))
-          [SMTPat (lhs (node read () (F.on_domain int z1))); 
-           SMTPat (rhs (node read () (F.on_domain int z2)))]
+          (ensures  ((node read () (F.on_domain int z1)) == (node read () (F.on_domain int z2))))
+          [SMTPat ((node read () (F.on_domain int z1))); 
+           SMTPat ((node read () (F.on_domain int z2)))]
   = ()
 
 
@@ -55,17 +52,17 @@ let node_ext (a:Type) (op:S.op) (x:S.param_of op) (z1 z2:S.arity_of op -> templa
   = ()
 
 
-let g (z:unit -> template_repr int) 
+let g (z:unit -> template_repr t) 
   : Pure unit 
-         (requires (forall x z . eq1 int x z))
-         (ensures  (fun _ -> lhs (node read () (F.on_domain int (fun _ -> node write 42 z))) 
+         (requires (forall a x z . eq1 a x z))
+         (ensures  (fun _ -> (node read () (F.on_domain int (fun _ -> node write 42 z))) 
                           == 
-                          rhs (node read () (F.on_domain int (fun _ -> node write 24 z)))))
+                          (node read () (F.on_domain int (fun _ -> node write 24 z)))))
   = ()
     //; assert (F.feq #int (fun _ -> node write 42 z) (fun _ -> node write 24 z))
 
 
-let g' (z:unit -> template_repr int) 
+let g' (z:unit -> template_repr t) 
   : Pure unit 
          (requires (forall a x y z . eq2 a x y z))
          (ensures  (fun _ -> node read () (F.on_domain int (fun _ -> node write 42 z)) 
@@ -75,7 +72,7 @@ let g' (z:unit -> template_repr int)
     //; assert (F.feq #int (fun _ -> node write 42 z) (fun _ -> node write 24 z))
 
 
-let h (z:unit -> template_repr int) 
+let h (z:unit -> template_repr t) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures  (fun _ -> node read () (F.on_domain int (fun _ -> node read () (F.on_domain int (fun _ -> node write 42 z))))
@@ -84,7 +81,7 @@ let h (z:unit -> template_repr int)
   = admit ()
 
 
-let h' (z:unit -> template_repr int) 
+let h' (z:unit -> template_repr t) 
   : Pure unit 
          (requires (forall a x y z . eq2 a x y z))
          (ensures  (fun _ -> node read () (F.on_domain int (fun _ -> node read () (F.on_domain int (fun _ -> node write 42 z))))
@@ -93,7 +90,7 @@ let h' (z:unit -> template_repr int)
   = admit ()
 
 
-let k (z:unit -> template_repr int) 
+let k (z:unit -> template_repr t) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures  (fun _ -> node write 24 (F.on_domain unit (fun _ -> node read () (F.on_domain int (fun _ -> node read () (F.on_domain int (fun _ -> node write 42 z))))))
