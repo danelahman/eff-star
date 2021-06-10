@@ -59,9 +59,12 @@ noeq type equation (a:Type) (ops:sig) = {
 noeq type repr_cvar_t a ops =
   | RCVar : (b:Type) -> (z:(b -> template_repr a ops)) -> repr_cvar_t a ops
 
+let repr_cvars_pred (cctx:list Type) a ops (rcvars:list (repr_cvar_t a ops))
+  = L.length cctx = L.length rcvars /\
+    (forall x . x < L.length rcvars ==> RCVar?.b (L.index rcvars x) == (L.index cctx x))
+
 let repr_cvars (cctx:list Type) a ops
-  = rcvars:list (repr_cvar_t a ops){L.length cctx = L.length rcvars /\
-                                   (forall x . x < L.length rcvars ==> RCVar?.b (L.index rcvars x) == (L.index cctx x))}
+  = rcvars:list (repr_cvar_t a ops){repr_cvars_pred cctx a ops rcvars}
 
 
 (* Equations between the representations of templates *)
@@ -73,13 +76,21 @@ noeq type repr_equation (a:Type) (ops:sig) = {
   repr_rhs:(vvars repr_vctx) -> (repr_cvars repr_cctx a ops) -> template_repr a ops
 }
 
+let lemma_to_cvars_cons (cctx:list Type) a ops 
+                        (b:Type) (z:(b -> template_repr a ops))
+                        (rcvars:list (repr_cvar_t a ops))
+  : Lemma (requires (repr_cvars_pred (b :: cctx) a ops (RCVar b z :: rcvars)))
+          (ensures  (repr_cvars_pred cctx a ops rcvars))
+          [SMTPat (repr_cvars_pred (b :: cctx) a ops (RCVar b z :: rcvars))]
+  = assert (forall x . x < L.length rcvars ==> L.index rcvars x == L.index (RCVar b z :: rcvars) (x + 1))
+
 let rec to_cvars (#cctx:list Type) #a #ops (rcvars:repr_cvars cctx a ops)
   : cvars cctx a ops 
   = match rcvars with
     | [] -> []
     | (RCVar b z) :: rcvars -> 
         match cctx with
-        | b' :: cctx -> (CVar b (reflect_cont #a #b #ops z)) :: to_cvars #cctx #a #ops (admit ()) //rcvars
+        | b' :: cctx -> (CVar b (reflect_cont #a #b #ops z)) :: to_cvars #cctx #a #ops rcvars
 
 let to_repr_equation a ops (eq:equation a ops) : repr_equation a ops = {
     repr_vctx = eq.vctx;
