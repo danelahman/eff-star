@@ -43,14 +43,14 @@ let read_ext a (z1 z2:int -> template_repr a)
            SMTPat ((node read () (F.on_domain int z2)))]
   = ()
 
-
+(*
 let node_ext (a:Type) (op:S.op) (x:S.param_of op) (z1 z2:S.arity_of op -> template_repr a)
   : Lemma (requires (F.feq #(S.arity_of op) z1 z2))
           (ensures  (node op x (F.on_domain (S.arity_of op) z1) == node op x (F.on_domain (S.arity_of op) z2)))
           [SMTPat (node op x (F.on_domain (S.arity_of op) z1)); 
            SMTPat (node op x (F.on_domain (S.arity_of op) z2))]
   = ()
-
+*)
 
 let g (z:unit -> template_repr t) 
   : Pure unit 
@@ -59,7 +59,9 @@ let g (z:unit -> template_repr t)
                           == 
                           (node read () (F.on_domain int (fun _ -> node write 24 z)))))
   = ()
-    //; assert (F.feq #int (fun _ -> node write 42 z) (fun _ -> node write 24 z))
+    //; assert (eq1 t 42 z)
+    //; assert (eq1 t 24 z)
+    ; assert (F.feq #int (fun _ -> node write 42 z) (fun _ -> node write 24 z))
 
 
 let g' (z:unit -> template_repr t) 
