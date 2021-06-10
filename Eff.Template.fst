@@ -4,16 +4,15 @@ open Eff.Signature
 
 (* Computation tree representation of the Eff effect *)
 
-noeq type template_repr' (a:Type u#u) (ops:sig) =
+noeq type template_repr (a:Type u#u) (ops:sig) =
   | Leaf : a 
-         -> template_repr' a ops
+         -> template_repr a ops
   | Node : op:op
          -> #squash(op `mem` ops)
          -> param_of op 
-         -> (arity_of op -> template_repr' a ops)
-         -> template_repr' a ops
+         -> (arity_of op -> template_repr a ops)
+         -> template_repr a ops
 
-let template_repr a ops = template_repr' a ops
 
 (* Monadic operators on the Eff effect *)
 
@@ -42,11 +41,36 @@ let rec template_subcomp a #ops1 #ops2
         Node op x 
           (fun y -> template_subcomp a (k y))
 
+let template_if_then_else a #ops
+  (f:template_repr a ops)
+  (g:template_repr a ops)
+  (b:bool)
+  : Type
+  = template_repr a ops
+
 let template_perform #ops
   (op:op{op `mem` ops})
   (x:param_of op)
   : template_repr (arity_of op) ops 
   = Node op x (fun y -> Leaf y)
+
+
+(* The Eff effect *)
+
+[@@allow_informative_binders]
+total
+reifiable
+reflectable
+layered_effect {
+  Template : a:Type -> sig -> Effect
+  with
+  repr         = template_repr;
+  return       = template_return;
+  bind         = template_bind;
+  subcomp      = template_subcomp;
+  if_then_else = template_if_then_else;
+  perform      = template_perform
+}
 
 
 (* Lifting of pure computations into the Eff effect *)
@@ -58,6 +82,8 @@ let lift_pure_template a wp ops
          (ensures (fun _ -> True))
   = FStar.Monotonic.Pure.elim_pure_wp_monotonicity wp;
     Leaf (f ())
+
+sub_effect PURE ~> Template = lift_pure_template
 
 
 (* Empty signature computations are pure *)
@@ -78,6 +104,9 @@ let perform #ops (op:op{op `mem` ops}) (x:param_of op)
 
 
 (* Effect handlers *)
+
+let handler (ops:sig) (a:Type) (ops':sig) = 
+  op:op{op `mem` ops} -> param_of op -> (arity_of op -> Template a ops') -> Template a ops'
 
 let template_handler (ops:sig) (a:Type) (ops':sig) = 
   op:op{op `mem` ops} -> param_of op -> (arity_of op -> template_repr a ops') -> template_repr a ops'

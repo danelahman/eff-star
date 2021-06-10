@@ -1,8 +1,8 @@
-module Eff.Equations.Test
+module Eff.Template.Equation.Test
 
-open Eff.Equations
 open Eff.Signature
 open Eff.Template
+open Eff.Template.Equation
 
 (* Read and write effects for integer state *)
 
@@ -67,6 +67,12 @@ open FStar.Tactics
 let foo a ops (z:int -> template_repr a ops)
   : Lemma (to_cvars #[int] [RCVar int z] == [CVar int (reflect_cont #a #int #ops z)])
   = ()
+
+(*
+let foobar a ops (z1:int -> Template a ops) (z2:int -> template_repr a ops)
+  : Lemma (reify (perform read () z) == )
+  = ()
+*)
 
 let st_eq a : equation a rw
   = {

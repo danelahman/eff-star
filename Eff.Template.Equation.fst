@@ -1,7 +1,8 @@
-module Eff.Equations
+module Eff.Template.Equation
 
 open Eff.Signature
 open Eff.Template
+open Eff.Template.Equiv
 
 module L = FStar.List.Tot
 
@@ -14,11 +15,13 @@ module L = FStar.List.Tot
 noeq type vvar_t =
   | VVar : (a:Type) -> (x:a) -> vvar_t
 
-let vvars (vctx:list Type) 
-  = vvars:list vvar_t{L.length vctx = L.length vvars /\
-                     (forall x . x < L.length vvars ==> VVar?.a (L.index vvars x) == (L.index vctx x))}
+let vvars_pred (vctx:list Type) (vvars:list vvar_t)
+  = L.length vctx = L.length vvars /\
+    (forall x . x < L.length vvars ==> VVar?.a (L.index vvars x) == (L.index vctx x))
 
-unfold
+let vvars vctx 
+  = vvars:list vvar_t{vvars_pred vctx vvars}
+
 let vvar #vctx (vvars:vvars vctx) (x:nat{x < L.length vctx}) 
   : (L.index vctx x)
   = VVar?.x (L.index vvars x)
@@ -29,11 +32,13 @@ let vvar #vctx (vvars:vvars vctx) (x:nat{x < L.length vctx})
 noeq type cvar_t a ops =
   | CVar : (b:Type) -> (z:(b -> Template a ops)) -> cvar_t a ops
 
-let cvars (cctx:list Type) a ops
-  = cvars:list (cvar_t a ops){L.length cctx = L.length cvars /\
-                             (forall x . x < L.length cvars ==> CVar?.b (L.index cvars x) == (L.index cctx x))}
+let cvars_pred (cctx:list Type) a ops (cvars:list (cvar_t a ops))
+  = L.length cctx = L.length cvars /\
+    (forall x . x < L.length cvars ==> CVar?.b (L.index cvars x) == (L.index cctx x))
 
-unfold
+let cvars cctx a ops
+  = cvars:list (cvar_t a ops){cvars_pred cctx a ops cvars}
+                             
 let cvar #cctx #a #ops (cvars:cvars cctx a ops) (x:nat{x < L.length cctx}) 
   : (L.index cctx x) -> Template a ops
   = CVar?.z (L.index cvars x)
@@ -106,14 +111,16 @@ let rec eq_to_prop #a #ops (eq:repr_equation a ops)
   : Tot prop (decreases %[eq.repr_vctx; eq.repr_cctx])
   = match eq.repr_vctx with
     | [] -> (match eq.repr_cctx with
-            | [] -> eq.repr_lhs [] [] == eq.repr_rhs [] []
+            | [] -> eq.repr_lhs [] [] `equiv` eq.repr_rhs [] []
             | b :: cctx -> 
-                forall (z:b -> template_repr a ops) . eq_to_prop ({ repr_vctx = eq.repr_vctx; 
-                                                              repr_cctx = cctx;
-                                                              repr_lhs  = (fun vvars rcvars -> eq.repr_lhs vvars (RCVar b z :: rcvars));
-                                                              repr_rhs  = (fun vvars rcvars -> eq.repr_rhs vvars (RCVar b z :: rcvars)) }))
+                forall (z:b -> template_repr a ops) . 
+                    eq_to_prop ({ repr_vctx = eq.repr_vctx; 
+                                  repr_cctx = cctx;
+                                  repr_lhs  = (fun vvars rcvars -> eq.repr_lhs vvars (RCVar b z :: rcvars));
+                                  repr_rhs  = (fun vvars rcvars -> eq.repr_rhs vvars (RCVar b z :: rcvars)) }))
     | b :: vctx -> 
-        forall (x:b) . eq_to_prop ({ repr_vctx = vctx; 
-                                repr_cctx = eq.repr_cctx;
-                                repr_lhs  = (fun vvars rcvars -> eq.repr_lhs (VVar b x :: vvars) rcvars);
-                                repr_rhs  = (fun vvars rcvars -> eq.repr_rhs (VVar b x :: vvars) rcvars) })
+        forall (x:b) . 
+            eq_to_prop ({ repr_vctx = vctx; 
+                          repr_cctx = eq.repr_cctx;
+                          repr_lhs  = (fun vvars rcvars -> eq.repr_lhs (VVar b x :: vvars) rcvars);
+                          repr_rhs  = (fun vvars rcvars -> eq.repr_rhs (VVar b x :: vvars) rcvars) })
