@@ -47,3 +47,55 @@ let st_eq3 a : equation a rw
       rhs  = (fun vvars cvars -> let y = perform write (vvar vvars 1) in
                               cvar cvars 0 y)
     }
+
+
+
+
+
+
+
+
+
+
+(* ********************** *)
+(* ********************** *)
+(* ********************** *)
+
+(*
+open FStar.Tactics
+
+let foo a ops (z:int -> template_repr a ops)
+  : Lemma (to_cvars #[int] [RCVar int z] == [CVar int (reflect_cont #a #int #ops z)])
+  = ()
+
+let st_eq a : equation a rw
+  = {
+      vctx = [int;int;int];
+      cctx = [unit];
+      lhs  = (fun vvars cvars -> perform write (vvar vvars 0);
+                              perform write (vvar vvars 1);
+                              let y = perform write (vvar vvars 2) in
+                              cvar cvars 0 y);
+      rhs  = (fun vvars cvars -> perform write (vvar vvars 0);
+                              let y = perform write (vvar vvars 2) in
+                              cvar cvars 0 y)
+    }
+
+let prop_st_eq3 a 
+  : prop
+  = eq_to_prop (to_repr_eq (st_eq3 a))
+
+let prop_st_eq a 
+  : prop
+  = eq_to_prop (to_repr_eq (st_eq a))
+
+(*
+let bar a 
+  : Lemma (to_repr_eq (st_eq3 a) == to_repr_eq (st_eq a)) by (norm [delta; nbe]; dump "bar")
+  = ()
+
+let bar a : Lemma (requires (prop_st_eq3 a))
+                  (ensures  (prop_st_eq a)) by (norm [delta; nbe]; dump "foo")
+  = ()
+*)
+*)
