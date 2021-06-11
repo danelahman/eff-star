@@ -71,6 +71,10 @@ let repr_cvars_pred (cctx:list Type) a ops (rcvars:list (repr_cvar_t a ops))
 let repr_cvars (cctx:list Type) a ops
   = rcvars:list (repr_cvar_t a ops){repr_cvars_pred cctx a ops rcvars}
 
+let repr_cvar #cctx #a #ops (rcvars:repr_cvars cctx a ops) (x:nat{x < L.length cctx}) 
+  : (L.index cctx x) -> template_repr a ops
+  = RCVar?.z (L.index rcvars x)
+
 
 (* Equations between the representations of templates *)
 
@@ -107,20 +111,20 @@ let to_repr_eq #a #ops (eq:equation a ops) : repr_equation a ops = {
 
 (* Turning an equation on template representations into to a logical formula *)
 
-let rec eq_to_prop #a #ops (eq:repr_equation a ops) 
+let rec repr_eq_to_prop #a #ops (eq:repr_equation a ops) 
   : Tot prop (decreases %[eq.repr_vctx; eq.repr_cctx])
   = match eq.repr_vctx with
     | [] -> (match eq.repr_cctx with
             | [] -> eq.repr_lhs [] [] `equiv` eq.repr_rhs [] []
             | b :: cctx -> 
                 forall (z:b -> template_repr a ops) . 
-                    eq_to_prop ({ repr_vctx = eq.repr_vctx; 
-                                  repr_cctx = cctx;
-                                  repr_lhs  = (fun vvars rcvars -> eq.repr_lhs vvars (RCVar b z :: rcvars));
-                                  repr_rhs  = (fun vvars rcvars -> eq.repr_rhs vvars (RCVar b z :: rcvars)) }))
+                    repr_eq_to_prop ({ repr_vctx = eq.repr_vctx; 
+                                       repr_cctx = cctx;
+                                       repr_lhs  = (fun vvars rcvars -> eq.repr_lhs vvars (RCVar b z :: rcvars));
+                                       repr_rhs  = (fun vvars rcvars -> eq.repr_rhs vvars (RCVar b z :: rcvars)) }))
     | b :: vctx -> 
         forall (x:b) . 
-            eq_to_prop ({ repr_vctx = vctx; 
-                          repr_cctx = eq.repr_cctx;
-                          repr_lhs  = (fun vvars rcvars -> eq.repr_lhs (VVar b x :: vvars) rcvars);
-                          repr_rhs  = (fun vvars rcvars -> eq.repr_rhs (VVar b x :: vvars) rcvars) })
+            repr_eq_to_prop ({ repr_vctx = vctx; 
+                               repr_cctx = eq.repr_cctx;
+                               repr_lhs  = (fun vvars rcvars -> eq.repr_lhs (VVar b x :: vvars) rcvars);
+                               repr_rhs  = (fun vvars rcvars -> eq.repr_rhs (VVar b x :: vvars) rcvars) })

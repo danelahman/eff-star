@@ -54,10 +54,18 @@ let h (z:unit -> template_repr t rw)
                           Node read () (fun _ -> Node read () (fun _ -> Node write 24 z))))
   = ()
 
+let h' (z:unit -> template_repr t rw) 
+  : Pure unit 
+         (requires (forall a x y z . eq2 a x y z))
+         (ensures  (fun _ -> Node read () (fun _ -> Node read () (fun _ -> Node write 42 z))
+                          `equiv`
+                          Node read () (fun _ -> Node read () (fun _ -> Node write 24 z))))
+  = ()
+
 let k (z:unit -> template_repr t rw) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
-         (ensures  (fun _ -> Node write 24 (fun _ -> Node read () (fun _ -> Node read () ((fun _ -> Node write 42 z))))
+         (ensures  (fun _ -> Node write 242 (fun _ -> Node read () (fun _ -> Node read () ((fun _ -> Node write 42 z))))
                           `equiv`
                           Node read () (fun _ -> Node read () (fun _ -> Node write 24 z))))
   = ()
@@ -66,7 +74,7 @@ let k (z:unit -> template_repr t rw)
 let k' (z:unit -> template_repr t rw) 
   : Pure unit 
          (requires (forall a x y z . eq2 a x y z)) // eq2 doesn't justify discarding writes altogether!
-         (ensures  (fun _ -> Node write 24 (fun _ -> Node read () (fun _ -> Node read () ((fun _ -> Node write 42 z))))
+         (ensures  (fun _ -> Node write 242 (fun _ -> Node read () (fun _ -> Node read () ((fun _ -> Node write 42 z))))
                           `equiv`
                           Node read () (fun _ -> Node read () (fun _ -> Node write 24 z))))
   = ()

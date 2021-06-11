@@ -55,13 +55,13 @@ let st_eq3 a : equation a rw
 
 
 
-
-
-(* ********************** *)
-(* ********************** *)
-(* ********************** *)
-
 (*
+
+(* ********************** *)
+(* ********************** *)
+(* ********************** *)
+
+
 open FStar.Tactics
 
 let foo a ops (z:int -> template_repr a ops)
@@ -89,11 +89,11 @@ let st_eq a : equation a rw
 
 let prop_st_eq3 a 
   : prop
-  = eq_to_prop (to_repr_eq (st_eq3 a))
+  = repr_eq_to_prop (to_repr_eq (st_eq3 a))
 
 let prop_st_eq a 
   : prop
-  = eq_to_prop (to_repr_eq (st_eq a))
+  = repr_eq_to_prop (to_repr_eq (st_eq a))
 
 (*
 let bar a 

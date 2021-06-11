@@ -18,7 +18,8 @@ let sig_aux =
   ops:S.set op{forall op1 op2 . op1 `S.mem` ops /\ op2 `S.mem` ops /\ name_of op1 = name_of op2 
                         ==> param_of op1 == param_of op2 /\ arity_of op1 == arity_of op2}
 
-let sig = FStar.Ghost.erased sig_aux
+let sig = sig_aux //FStar.Ghost.erased sig_aux 
+                  //making it non-ghost (for time being) avoid cluttering the computed equations with reveals/hides
 
 
 (* Basic operations on signatures *)
