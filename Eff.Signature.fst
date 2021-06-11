@@ -19,7 +19,8 @@ let sig_aux =
                         ==> param_of op1 == param_of op2 /\ arity_of op1 == arity_of op2}
 
 let sig = sig_aux //FStar.Ghost.erased sig_aux 
-                  //making it non-ghost (for time being) avoid cluttering the computed equations with reveals/hides
+                  //making it non-ghost (for time being) to avoid 
+                  //cluttering the computed equations with reveals/hides
 
 
 (* Basic operations on signatures *)

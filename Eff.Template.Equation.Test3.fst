@@ -80,7 +80,7 @@ open FStar.Tactics
 
 let foo a 
   : Lemma (requires (repr_eq_to_prop (st_eq3 a)))
-          (ensures  (repr_eq_to_prop (st_eq a))) by (norm [delta;zeta;primops;simplify;iota]; dump "foo")
+          (ensures  (repr_eq_to_prop (st_eq a))) by (norm [delta;zeta;primops;simplify;iota])
   = ()
 
 
