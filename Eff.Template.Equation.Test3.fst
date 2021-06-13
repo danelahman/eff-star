@@ -17,42 +17,37 @@ let rw : sig = r `union` w
 
 (* State equations using templates *)
 
-let st_eq1 a : repr_equation a rw 
+let st_eq1 : template_equation rw 
   = { 
-      repr_vctx = [];
-      repr_cctx = [unit];
-      repr_lhs  = (fun vvars cvars -> Node read () (fun y ->
-                                   Node write y (fun y' ->
-                                   repr_cvar cvars 0 y')));
-      repr_rhs  = (fun vvars cvars -> repr_cvar cvars 0 ())
+      tvctx = [];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> Node read () (fun y ->
+                         Node write y (fun y' ->
+                         Leaf (cvar 0 y'))));
+      trhs  = (fun vvars -> Leaf (cvar 0 ()))
     }
 
-let st_eq2 a : repr_equation a rw
+let st_eq2 : template_equation rw
   = {
-      repr_vctx = [int];
-      repr_cctx = [int];
-      repr_lhs  = (fun vvars cvars -> Node write (vvar vvars 0) (fun y ->
-                                   Node read () (fun y' ->
-                                   repr_cvar cvars 0 y')));
-      repr_rhs  = (fun vvars cvars -> Node write (vvar vvars 0) (fun y ->
-                                   repr_cvar cvars 0 (vvar vvars 0)))
+      tvctx = [int];
+      tcctx = [int];
+      tlhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+                         Node read () (fun y' ->
+                         Leaf (cvar 0 y'))));
+      trhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+                         Leaf (cvar 0 (vvar vvars 0))))
     }
 
-let st_eq3 a : repr_equation a rw
+let st_eq3 : template_equation rw
   = {
-      repr_vctx = [int;int];
-      repr_cctx = [unit];
-      repr_lhs  = (fun vvars cvars -> Node write (vvar vvars 0) (fun y ->
-                                   Node write (vvar vvars 1) (fun y' ->
-                                   repr_cvar cvars 0 y')));
-      repr_rhs  = (fun vvars cvars -> Node write (vvar vvars 1) (fun y ->
-                                   repr_cvar cvars 0 y))
+      tvctx = [int;int];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+                         Node write (vvar vvars 1) (fun y' ->
+                         Leaf (cvar 0 y'))));
+      trhs  = (fun vvars -> Node write (vvar vvars 1) (fun y ->
+                         Leaf (cvar 0 y)))
     }
-
-
-
-
-
 
 
 
@@ -63,24 +58,25 @@ let st_eq3 a : repr_equation a rw
 
 (* ***************************** *)
 
-let st_eq a : repr_equation a rw
+let st_eq : template_equation rw
   = {
-      repr_vctx = [int;int;int];
-      repr_cctx = [unit];
-      repr_lhs  = (fun vvars cvars -> Node write (vvar vvars 0) (fun y ->
-                                   Node write (vvar vvars 1) (fun y' ->
-                                   Node write (vvar vvars 2) (fun y'' ->
-                                   repr_cvar cvars 0 y''))));
-      repr_rhs  = (fun vvars cvars -> Node write (vvar vvars 0) (fun y ->
-                                   Node write (vvar vvars 2) (fun y' ->
-                                   repr_cvar cvars 0 y')))
+      tvctx = [int;int;int];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+                         Node write (vvar vvars 1) (fun y' ->
+                         Node write (vvar vvars 2) (fun y'' ->
+                         Leaf (cvar 0 y'')))));
+      trhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+                         Node write (vvar vvars 2) (fun y' ->
+                         Leaf (cvar 0 y'))))
     }
 
-open FStar.Tactics
 
-let foo a 
-  : Lemma (requires (repr_eq_to_prop (st_eq3 a)))
-          (ensures  (repr_eq_to_prop (st_eq a))) by (norm [delta;zeta;primops;simplify;iota])
+assume val t : Type
+
+let foo ()
+  : Lemma (requires (norm [delta;zeta;primops;simplify;iota] (eq_to_prop (to_inst_equation st_eq3 (id_template_handler t rw)))))
+          (ensures  (norm [delta;zeta;primops;simplify;iota] (eq_to_prop (to_inst_equation st_eq (id_template_handler t rw)))))
   = ()
 
 

@@ -18,11 +18,11 @@ let rw : sig = r `union` w
 (* Some dummy equations *)
 
 unfold
-let eq1 a x (z:unit -> template_repr a rw) 
+let eq1 a x (z:unit -> template a rw) 
   = Node write x z `equiv` z ()
 
 unfold
-let eq2 a x y (z:unit -> template_repr a rw) 
+let eq2 a x y (z:unit -> template a rw) 
   = Node write x z `equiv` Node write y z
 
 
@@ -32,13 +32,13 @@ assume val t : Type
 
 open FStar.Tactics
 
-let f (z:unit -> template_repr t rw) 
+let f (z:unit -> template t rw) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures  (fun _ -> Node write 42 z `equiv` Node write 24 z))
   = ()
 
-let g (z:unit -> template_repr t rw) 
+let g (z:unit -> template t rw) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures  (fun _ -> (Node read () (fun _ -> Node write 42 z)) 
@@ -46,7 +46,7 @@ let g (z:unit -> template_repr t rw)
                           (Node read () (fun _ -> Node write 24 z))))
   = ()
 
-let h (z:unit -> template_repr t rw) 
+let h (z:unit -> template t rw) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures  (fun _ -> Node read () (fun _ -> Node read () (fun _ -> Node write 42 z))
@@ -54,7 +54,7 @@ let h (z:unit -> template_repr t rw)
                           Node read () (fun _ -> Node read () (fun _ -> Node write 24 z))))
   = ()
 
-let h' (z:unit -> template_repr t rw) 
+let h' (z:unit -> template t rw) 
   : Pure unit 
          (requires (forall a x y z . eq2 a x y z))
          (ensures  (fun _ -> Node read () (fun _ -> Node read () (fun _ -> Node write 42 z))
@@ -62,7 +62,7 @@ let h' (z:unit -> template_repr t rw)
                           Node read () (fun _ -> Node read () (fun _ -> Node write 24 z))))
   = ()
 
-let k (z:unit -> template_repr t rw) 
+let k (z:unit -> template t rw) 
   : Pure unit 
          (requires (forall a x z . eq1 a x z))
          (ensures  (fun _ -> Node write 242 (fun _ -> Node read () (fun _ -> Node read () ((fun _ -> Node write 42 z))))
@@ -71,7 +71,7 @@ let k (z:unit -> template_repr t rw)
   = ()
 
 [@ expect_failure]
-let k' (z:unit -> template_repr t rw) 
+let k' (z:unit -> template t rw) 
   : Pure unit 
          (requires (forall a x y z . eq2 a x y z)) // eq2 doesn't justify discarding writes altogether!
          (ensures  (fun _ -> Node write 242 (fun _ -> Node read () (fun _ -> Node read () ((fun _ -> Node write 42 z))))

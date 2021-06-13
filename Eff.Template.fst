@@ -4,26 +4,26 @@ open Eff.Signature
 
 (* Computation tree representation of the Eff effect *)
 
-noeq type template_repr (a:Type u#u) (ops:sig) =
+noeq type template (a:Type u#u) (ops:sig) =
   | Leaf : a 
-         -> template_repr a ops
+         -> template a ops
   | Node : op:op
          -> #squash(op `mem` ops)
          -> param_of op 
-         -> (arity_of op -> template_repr a ops)
-         -> template_repr a ops
+         -> (arity_of op -> template a ops)
+         -> template a ops
 
 
 (* Monadic operators on the Eff effect *)
 
 let template_return a x #ops
-  : template_repr a ops
+  : template a ops
   = Leaf x
 
 let rec template_bind a b #ops
-  (t1:template_repr a ops) 
-  (t2:a -> template_repr b ops) 
-  : template_repr b ops
+  (t1:template a ops) 
+  (t2:a -> template b ops) 
+  : template b ops
   = match t1 with
     | Leaf x -> t2 x
     | Node op x k -> 
@@ -31,8 +31,8 @@ let rec template_bind a b #ops
           (fun y -> template_bind a b (k y) t2)
 
 let rec template_subcomp a #ops1 #ops2
-  (t:template_repr a ops1)
-  : Pure (template_repr a ops2)
+  (t:template a ops1)
+  : Pure (template a ops2)
          (requires (ops1 `sub` ops2))
          (ensures (fun _ -> True))
   = match t with
@@ -42,16 +42,16 @@ let rec template_subcomp a #ops1 #ops2
           (fun y -> template_subcomp a (k y))
 
 let template_if_then_else a #ops
-  (f:template_repr a ops)
-  (g:template_repr a ops)
+  (f:template a ops)
+  (g:template a ops)
   (b:bool)
   : Type
-  = template_repr a ops
+  = template a ops
 
 let template_perform #ops
   (op:op{op `mem` ops})
   (x:param_of op)
-  : template_repr (arity_of op) ops 
+  : template (arity_of op) ops 
   = Node op x (fun y -> Leaf y)
 
 
@@ -64,7 +64,7 @@ reflectable
 layered_effect {
   Template : a:Type -> sig -> Effect
   with
-  repr         = template_repr;
+  repr         = template;
   return       = template_return;
   bind         = template_bind;
   subcomp      = template_subcomp;
@@ -77,7 +77,7 @@ layered_effect {
 
 let lift_pure_template a wp ops
   (f:eqtype_as_type unit -> PURE a wp)
-  : Pure (template_repr a ops)
+  : Pure (template a ops)
          (requires (wp (fun _ -> True)))
          (ensures (fun _ -> True))
   = FStar.Monotonic.Pure.elim_pure_wp_monotonicity wp;
@@ -88,7 +88,7 @@ sub_effect PURE ~> Template = lift_pure_template
 
 (* Empty signature computations are pure *)
 
-let template_emp_pure #a (c:unit -> template_repr a emp) : a 
+let template_emp_pure #a (c:unit -> template a emp) : a 
   = match c () with
     | Leaf x -> x
   
@@ -109,9 +109,13 @@ let handler (ops:sig) (a:Type) (ops':sig) =
   op:op{op `mem` ops} -> param_of op -> (arity_of op -> Template a ops') -> Template a ops'
 
 let template_handler (ops:sig) (a:Type) (ops':sig) = 
-  op:op{op `mem` ops} -> param_of op -> (arity_of op -> template_repr a ops') -> template_repr a ops'
+  op:op{op `mem` ops} -> param_of op -> (arity_of op -> template a ops') -> template a ops'
 
-let reflect_cont #a #b #ops (k:b -> template_repr a ops) (y:b) : Template a ops
+let id_template_handler (a:Type) (ops:sig) 
+  : template_handler ops a ops
+  = fun op x k -> Node op x k
+
+let reflect_cont #a #b #ops (k:b -> template a ops) (y:b) : Template a ops
   = Template?.reflect (k y)
 
 let to_eff_handler #ops #a #ops'
@@ -124,10 +128,10 @@ let to_eff_handler #ops #a #ops'
 (* Effect handling *)
 
 let rec template_handle #a #b #ops #ops'
-  (t:template_repr a ops)
+  (t:template a ops)
   (h:template_handler ops b ops')
-  (k:a -> template_repr b ops')
-  : template_repr b ops'
+  (k:a -> template b ops')
+  : template b ops'
   = match t with
     | Leaf x -> k x
     | Node op x l -> 
