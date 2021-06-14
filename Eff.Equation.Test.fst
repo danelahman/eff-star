@@ -85,7 +85,20 @@ let h1 : eff_handler rw [] t rw []
 let h2_raw : raw_eff_handler rw [] t rw [st_eq3]
   = fun op x k -> T.Node op x k
 
-(*
 let h2 : eff_handler rw [] t rw [st_eq3]
   = (| h2_raw , eff_respects h2_raw () |)
+
+(*
+let h3_raw : raw_eff_handler rw [st_eq] t rw [st_eq3]
+  = fun op x k -> T.Node op x k
+
+let h3 : eff_handler rw [st_eq] t rw [st_eq3]
+  = (| h3_raw , eff_respects h3_raw ((), ()) |)
+
+
+let h4_raw : raw_eff_handler rw [] t rw [st_eq2]
+  = fun op x k -> T.Node op x k
+
+let h4 : eff_handler rw [] t rw [st_eq2]
+  = (| h4_raw , eff_respects h4_raw () |)
 *)

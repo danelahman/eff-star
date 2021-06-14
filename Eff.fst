@@ -155,8 +155,7 @@ let eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs'
 let eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops')
   = h:raw_eff_handler ops eqs a ops' eqs'
     & 
-    norm [delta;zeta;primops;simplify;iota] (eff_handler_respects ops eqs a ops' eqs' h)
-
+    eff_handler_respects ops eqs a ops' eqs' h
 
 
 
