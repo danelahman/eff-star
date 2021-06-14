@@ -121,7 +121,7 @@ let to_inst_equation #a #ops #ops'
 (* Turning an (instantiated) template equation into to a logical formula *)
 
 let rec eq_to_prop #a #ops (eq:inst_equation a ops) 
-  : Tot prop (decreases %[eq.ivctx; eq.icctx])
+  : Tot Type0 (decreases %[eq.ivctx; eq.icctx])
   = match eq.ivctx with
     | [] -> (match eq.icctx with
             | [] -> eq.ilhs [] [] `equiv` eq.irhs [] []
