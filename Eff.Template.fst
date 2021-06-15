@@ -105,20 +105,25 @@ let perform #ops (op:op{op `mem` ops}) (x:param_of op)
 
 (* Effect handlers *)
 
-let handler (ops:sig) (a:Type) (ops':sig) = 
-  op:op{op `mem` ops} -> param_of op -> (arity_of op -> Template a ops') -> Template a ops'
-
 let template_handler (ops:sig) (a:Type) (ops':sig) = 
   op:op{op `mem` ops} -> param_of op -> (arity_of op -> template a ops') -> template a ops'
+
+let handler (ops:sig) (a:Type) (ops':sig) = 
+  op:op{op `mem` ops} -> param_of op -> (arity_of op -> Template a ops') -> Template a ops'
 
 let id_template_handler (a:Type) (ops:sig) 
   : template_handler ops a ops
   = fun op x k -> Node op x k
 
+let id_handler (a:Type) (ops:sig) 
+  : handler ops a ops
+  = fun op x k -> let y = perform op x in k y
+
+
 let reflect_cont #a #b #ops (k:b -> template a ops) (y:b) : Template a ops
   = Template?.reflect (k y)
 
-let to_eff_handler #ops #a #ops'
+let to_template_handler #ops #a #ops'
   (h:handler ops a ops')
   : template_handler ops a ops'
   = fun op x k ->  
@@ -146,6 +151,6 @@ let handle #a #b #ops #ops'
   = Template?.reflect (
       template_handle 
         (reify (f ()))
-        (to_eff_handler h)
+        (to_template_handler h)
         (fun x -> reify (k x)))
 

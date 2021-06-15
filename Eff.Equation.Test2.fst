@@ -1,4 +1,4 @@
-module Eff.Equation.Test
+module Eff.Equation.Test2
 
 open Eff.Signature
 open Eff.Template.Equation
@@ -74,34 +74,36 @@ let st_eq : template_equation rw
 
 assume val a : Type
 
-let h1_raw : eff_handler_raw rw [] a rw []
-  = fun op x k -> T.Node op x k
-
-let h1 : eff_handler rw [] a rw []
+let h1_raw : handler_raw rw [] a rw []
+  = fun op x k -> let y = perform op x in k y
+  
+let h1 : handler rw [] a rw []
   = (| h1_raw , () |)
 
-let h2_raw : eff_handler_raw rw [] a rw [st_eq3]
-  = fun op x k -> T.Node op x k
+let h2_raw : handler_raw rw [] a rw [st_eq3]
+  = fun op x k -> let y = perform op x in k y
 
-let h2 : eff_handler rw [] a rw [st_eq3]
+let h2 : handler rw [] a rw [st_eq3]
   = (| h2_raw , () |)
 
-let h3_raw : eff_handler_raw rw [] a rw [st_eq2]
-  = fun op x k -> T.Node op x k
+let h3_raw : handler_raw rw [] a rw [st_eq2]
+  = fun op x k -> let y = perform op x in k y
 
-let h3 : eff_handler rw [] a rw [st_eq2]
+let h3 : handler rw [] a rw [st_eq2]
   = (| h3_raw , () |)
 
-let h4_raw : eff_handler_raw rw [st_eq] a rw [st_eq3]
-  = fun op x k -> T.Node op x k
+let h4_raw : handler_raw rw [st_eq] a rw [st_eq3]
+  = fun op x k -> let y = perform op x in k y
 
-let h4 : eff_handler rw [st_eq] a rw [st_eq3]
+(*
+let h4 : handler rw [st_eq] a rw [st_eq3]
   = (| h4_raw , ((fun _ -> ()) , ()) |)
 
-let h5_raw : eff_handler_raw rw [st_eq;st_eq] a rw [st_eq3]
-  = fun op x k -> T.Node op x k
+let h5_raw : handler_raw rw [st_eq;st_eq] a rw [st_eq3]
+  = fun op x k -> let y = perform op x in k y
 
-let h5 : eff_handler rw [st_eq;st_eq] a rw [st_eq3]
+let h5 : handler rw [st_eq;st_eq] a rw [st_eq3]
   = (| h5_raw , ((fun () -> ()) , 
                 ((fun () -> ()) , 
                  ())) |)
+*)
