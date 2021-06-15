@@ -10,26 +10,26 @@ module L = FStar.List.Tot
 
 (* Equation annotations in computation types *)
 
-let equations ops = list (equation ops)
+let equations ops = list (template_equation ops)
 
 
 (* Subtyping equation annotations *)
 
-let eq_subcomp #ops1 #ops2 (eq:equation ops1)
-  : Pure (equation ops2)
-         (requires (ops1 `sub` ops2))
-         (ensures  (fun _ -> True))
+let eq_subcomp #ops1 #ops2 (p:squash(ops1 `sub` ops2)) (eq:template_equation ops1)
+  : template_equation ops2
   = {
-      vctx = eq.vctx;
-      cctx = eq.cctx;
-      lhs  = (fun vvars -> eq.lhs vvars);
-      rhs  = (fun vvars -> eq.rhs vvars)
+      tvctx = eq.tvctx;
+      tcctx = eq.tcctx;
+      tlhs  = (fun vvars -> T.template_subcomp _ (eq.tlhs vvars));
+      trhs  = (fun vvars -> T.template_subcomp _ (eq.trhs vvars))
     }
 
-let eqs_sub #ops1 #ops2 (eqs1:equations ops1) (eqs2:equations ops2)
-  = ops1 `sub` ops2 /\
-    (forall (eq:equation ops1) . L.memP eq eqs1 ==> L.memP (eq_subcomp eq) eqs2)
 
+let dirt_sub (dirt1:(ops1:sig & equations ops1)) (dirt2:(ops2:sig & equations ops2)) //#ops1 #ops2 (eqs1:equations ops1) (eqs2:equations ops2)
+  = let (| ops1 , eqs1 |) = dirt1 in
+    let (| ops2 , eqs2 |) = dirt2 in
+    ops1 `sub` ops2 /\
+    (forall (eq:template_equation ops1) (p:squash(ops1 `sub` ops2)) . L.memP eq eqs1 ==> L.memP (eq_subcomp p eq) eqs2)
 
 (* Computation tree representation of the Eff effect *)
 
@@ -53,7 +53,7 @@ let eff_subcomp a #ops1 #ops2 #eqs1 #eqs2
   (t:eff a ops1 eqs1)
   : Pure (eff a ops2 eqs2)
          (requires (ops1 == ops2 /\ eqs1 === eqs2)) // temporarily, TODO: find way around the typechecking problems with inclusions
-         //(requires (ops1 `sub` ops2 /\ eqs1 `eqs_sub` eqs2))
+         //(requires ((| ops1 , eqs1 |) `dirt_sub` (| ops2 , eqs2 |)))
          (ensures (fun _ -> True))
   = T.template_subcomp a #ops1 #ops2 t
 
@@ -129,33 +129,43 @@ let rec to_respects_hypotheses a #ops (eqs:equations ops)
   = match eqs with
     | [] -> True
     | eq :: eqs' ->
-      eq_to_prop (to_inst_equation (to_template_equation eq) (T.id_template_handler a ops))
+      eq_to_prop (to_inst_equation eq (T.id_template_handler a ops))
       /\
       to_respects_hypotheses a eqs'
+
+(*
+let rec to_respects_conclusion #a #ops #ops' (eqs:equations ops) #eqs' (h:raw_eff_handler ops eqs a ops' eqs')
+  : Type0
+  = match eqs with
+    | [] -> unit
+    | eq :: eqs'' -> 
+        squash(eq_to_prop (to_inst_equation eq h))
+        *
+        to_respects_conclusion eqs'' h
+*)
 
 let rec to_respects_conclusion #a #ops #ops' (eqs:equations ops) #eqs' (h:raw_eff_handler ops eqs a ops' eqs')
   : Type0
   = match eqs with
     | [] -> unit
     | eq :: eqs'' -> 
-        _:unit{eq_to_prop (to_inst_equation (to_template_equation eq) h)}
-        *
+        eq_to_prop (to_inst_equation eq (T.id_template_handler a ops))
+        /\
         to_respects_conclusion eqs'' h
 
-let eff_respects #a #ops #ops' #eqs #eqs' (h:raw_eff_handler ops eqs a ops' eqs') 
-  (proofs:norm [delta;zeta;primops;simplify;iota] (to_respects_conclusion eqs h))
-  : unit -> norm [delta;zeta;primops;simplify;iota] (to_respects_conclusion eqs h)
-  = fun _ -> proofs
+let eff_norm_steps = [delta;zeta;primops;simplify;iota]
 
 let eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') (h:raw_eff_handler ops eqs a ops' eqs') =
-  unit -> Pure (norm [delta;zeta;primops;simplify;iota] (to_respects_conclusion eqs h))
-              (requires (norm [delta;zeta;primops;simplify;iota] (to_respects_hypotheses a eqs')))
-              (ensures  (fun _ -> True))
+  unit -> Pure unit
+              (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+              (ensures  (fun _ -> norm eff_norm_steps (to_respects_conclusion eqs h)))
 
 let eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops')
   = h:raw_eff_handler ops eqs a ops' eqs'
     & 
     eff_handler_respects ops eqs a ops' eqs' h
+
+let eff_respects = fun () -> ()
 
 
 

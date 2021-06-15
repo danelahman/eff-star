@@ -19,36 +19,36 @@ let rw : sig = r `union` w
 
 (* State equations using templates *)
 
-let st_eq1 : equation rw 
+let st_eq1 : template_equation rw 
   = { 
-      vctx = [];
-      cctx = [unit];
-      lhs  = (fun vvars -> let y = T.perform read () in 
-                        let y' = T.perform write y in
-                        cvar 0 y');
-      rhs  = (fun vvars -> cvar 0 ())
+      tvctx = [];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> T.Node read () (fun y ->
+                         T.Node write y (fun y' ->
+                         T.Leaf (cvar 0 y'))));
+      trhs  = (fun vvars -> T.Leaf (cvar 0 ()))
     }
 
-let st_eq2 : equation rw
+let st_eq2 : template_equation rw
   = {
-      vctx = [int];
-      cctx = [int];
-      lhs  = (fun vvars -> T.perform write (vvar vvars 0);
-                        let y = T.perform read () in
-                        cvar 0 y);
-      rhs  = (fun vvars -> T.perform write (vvar vvars 0);
-                        cvar 0 (vvar vvars 0))
+      tvctx = [int];
+      tcctx = [int];
+      tlhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y ->
+                         T.Node read () (fun y' ->
+                         T.Leaf (cvar 0 y'))));
+      trhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y ->
+                         T.Leaf (cvar 0 (vvar vvars 0))))
     }
 
-let st_eq3 : equation rw
+let st_eq3 : template_equation rw
   = {
-      vctx = [int;int];
-      cctx = [unit];
-      lhs  = (fun vvars -> T.perform write (vvar vvars 0);
-                        let y = T.perform write (vvar vvars 1) in
-                        cvar 0 y);
-      rhs  = (fun vvars -> let y = T.perform write (vvar vvars 1) in
-                        cvar 0 y)
+      tvctx = [int;int];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y ->
+                         T.Node write (vvar vvars 1) (fun y' ->
+                         T.Leaf (cvar 0 y'))));
+      trhs  = (fun vvars -> T.Node write (vvar vvars 1) (fun y ->
+                         T.Leaf (cvar 0 y)))
     }
 
 
@@ -56,49 +56,48 @@ let st_eq3 : equation rw
 (* ************************** *)
 
 
-let st_eq : equation rw
+let st_eq : template_equation rw
   = {
-      vctx = [int;int;int];
-      cctx = [unit];
-      lhs  = (fun vvars -> T.perform write (vvar vvars 0);
-                        T.perform write (vvar vvars 1);
-                        let y = T.perform write (vvar vvars 2) in
-                        cvar 0 y);
-      rhs  = (fun vvars -> T.perform write (vvar vvars 0);
-                        let y = T.perform write (vvar vvars 2) in
-                        cvar 0 y)
+      tvctx = [int;int;int];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y ->
+                         T.Node write (vvar vvars 1) (fun y' ->
+                         T.Node write (vvar vvars 2) (fun y'' ->
+                         T.Leaf (cvar 0 y'')))));
+      trhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y ->
+                         T.Node write (vvar vvars 2) (fun y' ->
+                         T.Leaf (cvar 0 y'))))
     }
 
 
 (* ************************** *)
 
-assume val t : Type0
+assume val a : Type
 
-
-let h1_raw : raw_eff_handler rw [] t rw []
+let h1_raw : raw_eff_handler rw [] a rw []
   = fun op x k -> T.Node op x k
 
-let h1 : eff_handler rw [] t rw []
-  = (| h1_raw , eff_respects h1_raw () |)
+let h1 : eff_handler rw [] a rw []
+  = (| h1_raw , eff_respects |)
 
-
-let h2_raw : raw_eff_handler rw [] t rw [st_eq3]
+let h2_raw : raw_eff_handler rw [] a rw [st_eq3]
   = fun op x k -> T.Node op x k
 
-let h2 : eff_handler rw [] t rw [st_eq3]
-  = (| h2_raw , eff_respects h2_raw () |)
+let h2 : eff_handler rw [] a rw [st_eq3]
+  = (| h2_raw , eff_respects |)
 
-(*
-let h3_raw : raw_eff_handler rw [st_eq] t rw [st_eq3]
+
+let h3_raw : raw_eff_handler rw [st_eq] a rw [st_eq3]
   = fun op x k -> T.Node op x k
 
-let h3 : eff_handler rw [st_eq] t rw [st_eq3]
-  = (| h3_raw , eff_respects h3_raw ((), ()) |)
+let h3 : eff_handler rw [st_eq] a rw [st_eq3]
+  = (| h3_raw , eff_respects |)
 
 
-let h4_raw : raw_eff_handler rw [] t rw [st_eq2]
+let h4_raw : raw_eff_handler rw [] a rw [st_eq2]
   = fun op x k -> T.Node op x k
 
-let h4 : eff_handler rw [] t rw [st_eq2]
-  = (| h4_raw , eff_respects h4_raw () |)
-*)
+let h4 : eff_handler rw [] a rw [st_eq2]
+  = (| h4_raw , eff_respects |)
+
+
