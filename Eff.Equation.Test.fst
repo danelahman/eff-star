@@ -2,6 +2,7 @@ module Eff.Equation.Test
 
 open Eff.Signature
 open Eff.Template.Equation
+open Eff.Template.Equiv
 
 module T = Eff.Template
 
@@ -86,12 +87,12 @@ let h2 : eff_handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
 
 let h3 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> T.Node op x k);
-  eff_respects = ()
+  eff_respects = (fun () -> ())
 }
 
 let h4 : eff_handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> T.Node op x k);
-  eff_respects = () , ()
+  eff_respects = (fun () -> ()) , (fun () -> ())
 }
 
 let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
@@ -100,9 +101,9 @@ let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
                     | read -> 
                       T.Node read x k
                     | write -> 
-                      T.Node write (x+1) (fun _ -> 
+                      T.Node write (x + 1) (fun _ -> 
                       T.Node write x k));
-  eff_respects = ()
+  eff_respects = (fun () -> ())
 }
 
 let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
@@ -113,12 +114,14 @@ let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
                     | write -> 
                       T.Node write (x + 42) (fun _ -> 
                       T.Node write x k));
-  eff_respects = () , ((), ())
+  eff_respects = (fun () -> ()) , ((fun () -> ()), (fun () -> ()))
 }
 
 
 
-(* ******* *)
+(* **************************** *)
+(* **************************** *)
+(* **************************** *)
 
 let h7 : eff_handler rw [st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> 
@@ -128,24 +131,9 @@ let h7 : eff_handler rw [st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
                     | write -> 
                       T.Node read () (fun y -> 
                       T.Node write (x + y) k));
-  eff_respects = ()
+  eff_respects = (fun () -> ())
 }
 
-
-module TT = FStar.Tactics
-
-let h7' ()
-  : squash (norm eff_norm_steps (to_respects_hypotheses a [st_eq1;st_eq2;st_eq3])
-            ==>
-            norm eff_norm_steps (eq_to_prop (to_inst_equation #a #rw #rw st_eq3 (
-              (fun op x k -> 
-                 match op with
-                 | read -> 
-                    T.Node read x k
-                 | write -> 
-                    T.Node read () (fun y -> 
-                    T.Node write (x + y) k)))))) by (TT.norm []; TT.dump "foo")
-   = ()
 
 (*
 
@@ -177,18 +165,53 @@ write x' z
 
 *)
 
-let h8 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
+let h8 : eff_handler rw [st_eq1] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> 
                     match op with
                     | read -> 
                       T.Node read x k
                     | write -> 
                       T.Node write 42 k);
-  eff_respects = () , ((), ())
+  eff_respects = (fun () -> ())
 }
 
 (*
 
-Again, why does F*/SMT think this is a correct handler?
+Again, why does F*/SMT think h8 is a correct handler? h8_expanded fails below as expected.
 
 *)
+
+module TT = FStar.Tactics
+
+[@expect_failure]
+let h8_expanded ()
+  : Pure unit (requires ((forall z . (T.Node #a #rw read () (fun y -> T.Node write y (fun y' -> z y'))) `equiv` (z ()))
+                         /\
+                         (forall x z . (T.Node #a #rw write x (fun y -> T.Node read () (fun y' -> z y'))) `equiv` (T.Node write x (fun y -> z x)))
+                         /\
+                         (forall x x' z . (T.Node #a #rw write x (fun y -> T.Node write x' (fun y' -> z y'))) `equiv` (T.Node write x (fun y' -> z y')))))
+              (ensures  (fun _ -> 
+                         (forall z . (T.Node #a #rw read () (fun y -> T.Node write 42 (fun y' -> z y'))) `equiv` (z ()))))
+  = ()
+
+
+
+
+
+(* **************************** *)
+(* **************************** *)
+(* **************************** *)
+
+let h6_eq1_expanded (z:unit -> T.template a rw)
+  : Pure unit (requires ((forall z . (T.Node #a #rw read () (fun y -> T.Node write y (fun y' -> z y'))) `equiv` (z ()))
+                         /\
+                         (forall x z . (T.Node #a #rw write x (fun y -> T.Node read () (fun y' -> z y'))) `equiv` (T.Node write x (fun y -> z x)))
+                         /\
+                         (forall x x' z . (T.Node #a #rw write x (fun y -> T.Node write x' (fun y' -> z y'))) `equiv` (T.Node write x' (fun y' -> z y')))))
+              (ensures  (fun _ -> 
+                         ((T.Node #a #rw read () (fun y -> T.Node write (y + 42) (fun _ -> T.Node write y (fun y' -> z y')))) `equiv` (z ()))))
+  = assert ((T.Node #a #rw read () (fun y -> T.Node write (y + 42) (fun _ -> T.Node write y (fun y' -> z y')))) `equiv` (T.Node #a #rw read () (fun y -> T.Node write y (fun y' -> z y'))))
+    //equivalently to the above assert, one could also explicitly call trans, as below
+    //trans (T.Node #a #rw read () (fun y -> T.Node write (y + 42) (fun _ -> T.Node write y (fun y' -> z y')))) 
+    //      (T.Node #a #rw read () (fun y -> T.Node write y (fun y' -> z y'))) 
+    //      (z ())

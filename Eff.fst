@@ -147,13 +147,13 @@ let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type)
   = match eqs with
     | [] -> unit
     | eq :: [] -> 
-        squash (norm eff_norm_steps (to_respects_hypotheses a eqs')
-                ==>
-                norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))
+        (unit -> Pure unit 
+                     (requires (norm eff_norm_steps (to_respects_hypotheses a eqs'))) 
+                     (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
     | eq :: eq' :: eqs'' -> 
-        squash (norm eff_norm_steps (to_respects_hypotheses a eqs')
-                ==>
-                norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))
+        (unit -> Pure unit 
+                     (requires (norm eff_norm_steps (to_respects_hypotheses a eqs'))) 
+                     (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
         *
         eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
@@ -183,13 +183,11 @@ let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type)
   = match eqs with
     | [] -> unit
     | eq :: [] ->
-        squash (norm eff_norm_steps (to_respects_hypotheses a eqs')
-                ==>
-                norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))
+        (unit -> Pure unit (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                          (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
     | eq :: eq' :: eqs'' -> 
-        squash (norm eff_norm_steps (to_respects_hypotheses a eqs')
-                ==>
-                norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))
+        (unit -> Pure unit (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                          (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
         *
         handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
