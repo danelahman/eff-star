@@ -62,22 +62,45 @@ let st_eq : template_equation rw
   = {
       tvctx = [int;int;int];
       tcctx = [unit];
-      tlhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+      tlhs  = (fun vvars -> Node write 42 (fun _ -> 
+                         Node write (vvar vvars 0) (fun y ->
+                         Node write 42 (fun _ -> 
                          Node write (vvar vvars 1) (fun y' ->
+                         Node write 42 (fun _ -> 
                          Node write (vvar vvars 2) (fun y'' ->
-                         Leaf (cvar 0 y'')))));
-      trhs  = (fun vvars -> Node write (vvar vvars 0) (fun y ->
+                         Leaf (cvar 0 y''))))))));
+      trhs  = (fun vvars -> Node write 42 (fun _ -> 
+                         Node write (vvar vvars 0) (fun y ->
+                         Node write 42 (fun _ -> 
                          Node write (vvar vvars 2) (fun y' ->
-                         Leaf (cvar 0 y'))))
+                         Leaf (cvar 0 y'))))))
     }
 
 
 assume val t : Type
 
+module TT = FStar.Tactics
+
 let foo ()
-  : Lemma (requires (norm [delta;zeta;primops;simplify;iota] (eq_to_prop (to_inst_equation st_eq3 (id_template_handler t rw)))))
-          (ensures  (norm [delta;zeta;primops;simplify;iota] (eq_to_prop (to_inst_equation st_eq (id_template_handler t rw)))))
-  = ()
+  : Lemma (requires (eq_to_prop (to_inst_equation st_eq3 (id_template_handler t rw))))
+          (ensures  (eq_to_prop (to_inst_equation st_eq (id_template_handler t rw))))
+          by (TT.compute (); TT.dump "foo")
+  = admit ();
+    assert (forall x1 x2 x3 (z:unit -> template t rw) . 
+             equiv (Node write 42 (fun _ -> 
+                    Node write x1 (fun y ->
+                    Node write 42 (fun _ -> 
+                    Node write x2 (fun y' ->
+                    Node write 42 (fun _ -> 
+                    Node write x3 z)))))) 
+                   (Node write x3 z));
+    assert (forall x1 x3 (z:unit -> template t rw) . 
+             equiv (Node write 42 (fun _ -> 
+                    Node write x1 (fun y ->
+                    Node write 42 (fun _ -> 
+                    Node write x3 z)))) 
+                   (Node write x3 z))
+                   
 
 
 

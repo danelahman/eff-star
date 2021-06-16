@@ -79,7 +79,7 @@ assume val a : Type
 
 #set-options "--z3rlimit_factor 10"
 
-let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
+let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq3]
  = fun op x k -> 
      match op with
      | Op "read" -> 
@@ -89,11 +89,25 @@ let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
          T.Node write x k)
 
 let h5_respects ()
- : Tot (eff_handler_respects rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] h5_op_cases)
-     by (respects_tac (); TT.dump "foo")
+ : Tot (eff_handler_respects rw [st_eq] a rw [st_eq3] h5_op_cases)
+     by (respects_tac () 
+         (*TT.compute ();
+         TT.repeat' respects_tac_split_hyp;
+         let _ = TT.l_intros () in
+         //TT.repeat' (fun _ -> TT.split (); TT.smt ());
+         TT.split ();
+         let _ = TT.l_intros () in
+         TT.mapply (`op_cong);
+         let _ = TT.l_intros () in
+         TT.mapply (`op_cong);
+         let _ = TT.l_intros () in
+         TT.mapply (`op_cong);
+         let _ = TT.l_intros () in
+         TT.dump "foo";
+         TT.smt ()*))
  = ()
 
-let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
+let h5 : eff_handler rw [st_eq] a rw [st_eq3] = {
   eff_op_cases = h5_op_cases;
   eff_respects = h5_respects ()
 }

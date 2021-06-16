@@ -18,7 +18,7 @@ val trans (#a:Type) (#ops:sig) (t1 t2 t3:template a ops)
   : Lemma (requires (t1 `equiv` t2 /\ t2 `equiv` t3))
           (ensures  (t1 `equiv` t3))
           [SMTPat (t1 `equiv` t2); 
-           SMTPat (t1 `equiv` t3)]
+           SMTPat (t2 `equiv` t3)]
 
 val leaf_cong (#a:Type) (#ops:sig) (x1 x2:a)
   : Lemma (requires (x1 == x2))
