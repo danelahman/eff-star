@@ -89,6 +89,7 @@ let h1 : eff_handler rw [] a rw [] = {
   eff_respects = h1_respects
 }
 
+
 let h2_op_cases : eff_handler_raw rw [] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> T.Node op x k
 
@@ -100,6 +101,7 @@ let h2 : eff_handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h2_op_cases;
   eff_respects = h2_respects
 }
+
 
 let h3_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> T.Node op x k
@@ -116,25 +118,24 @@ let h3 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_respects = h3_respects ()
 }
 
-(*
+
 let h4_op_cases : eff_handler_raw rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> T.Node op x k
 
 let h4_respects ()
  : Tot (eff_handler_respects rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] h3_op_cases)
-     by (TT.norm eff_norm_steps; 
-         let _ = TT.l_intros () in 
-         TT.split (); 
-         let _ = TT.l_intros () in 
+     by (TT.norm eff_norm_steps;
+         let _ = TT.l_intros () in
+         TT.split ();
          TT.smt ();
-         let _ = TT.l_intros () in 
          TT.smt ())
- = (fun () -> ()) , (fun () -> ())
+ = ()
 
 let h4 : eff_handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h4_op_cases;
   eff_respects = h4_respects ()
 }
+
 
 let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> 
@@ -147,14 +148,22 @@ let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
 
 let h5_respects ()
  : Tot (eff_handler_respects rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] h5_op_cases)
-     by (TT.norm eff_norm_steps; let _ = TT.l_intros () in TT.smt ())
- = fun () -> ()
+     by (TT.norm eff_norm_steps;
+         let _ = TT.l_intros () in
+         TT.smt ())
+ = ()
 
 let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h5_op_cases;
   eff_respects = h5_respects ()
 }
 
+
+
+
+
+
+(*
 let h6_op_cases : eff_handler_raw rw [st_eq3;st_eq1;st_eq2] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> 
      match op with
