@@ -127,14 +127,14 @@ let eff_norm_steps = [delta;zeta;primops;simplify;iota]
 
 (* Hypotheses for proving handler correctness *)
 
-let rec to_respects_hypotheses a #ops (eqs:equations ops) 
+let rec to_respects_hypotheses a #ops (eqs':equations ops) 
   : Type0
-  = match eqs with
+  = match eqs' with
     | [] -> True
-    | eq :: eqs' ->
+    | eq :: eqs'' ->
       eq_to_prop (to_inst_equation eq (T.id_template_handler a ops))
       /\
-      to_respects_hypotheses a eqs'
+      to_respects_hypotheses a eqs''
 
 
 (* Effect handlers (on Eff effect representations) *)
@@ -148,11 +148,11 @@ let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type)
   = match eqs with
     | [] -> unit
     | eq :: [] -> 
-        (unit -> Lemma (requires ((to_respects_hypotheses a eqs'))) 
-                      (ensures  ((eq_to_prop (to_inst_equation eq h)))))
+        (unit -> Lemma (requires (to_respects_hypotheses a eqs')) 
+                      (ensures  (eq_to_prop (to_inst_equation eq h))))
     | eq :: eq' :: eqs'' -> 
-        (unit -> Lemma (requires ((to_respects_hypotheses a eqs'))) 
-                      (ensures  ((eq_to_prop (to_inst_equation eq h)))))
+        (unit -> Lemma (requires (to_respects_hypotheses a eqs')) 
+                      (ensures  (eq_to_prop (to_inst_equation eq h))))
         *
         eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
@@ -182,11 +182,11 @@ let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type)
   = match eqs with
     | [] -> unit
     | eq :: [] ->
-        (unit -> Lemma (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
-                      (ensures  (norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
+        (unit -> Lemma (requires (to_respects_hypotheses a eqs'))
+                      (ensures  (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h)))))
     | eq :: eq' :: eqs'' -> 
-        (unit -> Lemma (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
-                      (ensures  (norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
+        (unit -> Lemma (requires (to_respects_hypotheses a eqs'))
+                      (ensures  (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h)))))
         *
         handler_respects ops (eq' :: eqs'') a ops' eqs' h
 

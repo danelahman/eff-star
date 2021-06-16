@@ -149,8 +149,7 @@ let h6_op_cases : eff_handler_raw rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;
 
 let h6_respects ()
  : Tot (eff_handler_respects rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] h6_op_cases)
-     by (TT.norm eff_norm_steps; 
-         TT.dump "h6")
+     by (TT.norm eff_norm_steps)
  = (fun () -> ()) , ((fun () -> ()), (fun () -> ()))
 
 let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
