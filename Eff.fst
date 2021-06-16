@@ -120,11 +120,6 @@ let perform #ops #eqs (op:op{op `mem` ops}) (x:param_of op)
   = Eff?.perform op x
 
 
-(* Normalisation steps used to compute handler types *)
-
-let eff_norm_steps = [delta;zeta;primops;simplify;iota]
-
-
 (* Effect handlers (on Eff effect representations) *)
 
 let eff_handler_raw (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') 
@@ -156,23 +151,6 @@ let eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type)
             ==>
             to_respects_conclusion h)
 
-(*
-    unit -> Lemma (requires (to_respects_hypotheses a eqs'))
-                 (ensures  (to_respects_conclusion h))
-*)
-(*
-  = match eqs with
-    | [] -> unit
-    | eq :: [] -> 
-        (unit -> Lemma (requires (to_respects_hypotheses a eqs')) 
-                      (ensures  (eq_to_prop (to_inst_equation eq h))))
-    | eq :: eq' :: eqs'' -> 
-        (unit -> Lemma (requires (to_respects_hypotheses a eqs')) 
-                      (ensures  (eq_to_prop (to_inst_equation eq h))))
-        *
-        eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
-*)
-
 noeq type eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
   eff_op_cases : eff_handler_raw ops eqs a ops' eqs';
   eff_respects : eff_handler_respects ops eqs a ops' eqs' eff_op_cases
@@ -193,19 +171,12 @@ let to_eff_handler_raw #ops #eqs #a #ops' #eqs'
   = fun op x k ->  
       (reify (h op x (reflect_cont k)))
 
-let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
+let handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
   (ops':sig) (eqs':equations ops') (h:handler_raw ops eqs a ops' eqs') 
   : Type 
-  = match eqs with
-    | [] -> unit
-    | eq :: [] ->
-        (unit -> Lemma (requires (to_respects_hypotheses a eqs'))
-                      (ensures  (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h)))))
-    | eq :: eq' :: eqs'' -> 
-        (unit -> Lemma (requires (to_respects_hypotheses a eqs'))
-                      (ensures  (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h)))))
-        *
-        handler_respects ops (eq' :: eqs'') a ops' eqs' h
+  = squash (to_respects_hypotheses a eqs'
+            ==>
+            to_respects_conclusion (to_eff_handler_raw h))
 
 noeq type handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
   op_cases : handler_raw ops eqs a ops' eqs';
@@ -232,3 +203,24 @@ let handle #a #b #ops #ops' #eqs #eqs'
         (reify (f ()))
         (to_eff_handler_raw h.op_cases)
         (fun x -> reify (k x)))
+
+
+(* Tactics to manipulate the handler correctness VCs *)
+
+module TT = FStar.Tactics
+
+let respects_tac_split_hyp ()
+  : TT.Tac unit
+  = let hyp = TT.implies_intro () in
+    TT.and_elim (TT.pack (TT.Tv_Var (TT.bv_of_binder hyp)));
+    TT.clear hyp;
+    let _ = TT.implies_intro () in
+    ()
+
+let respects_tac ()
+  : TT.Tac unit
+  = TT.compute ();
+    TT.repeat' respects_tac_split_hyp;
+    let _ = TT.l_intros () in
+    TT.repeat' (fun _ -> TT.split (); TT.smt ());
+    TT.smt ()
