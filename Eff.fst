@@ -8,6 +8,7 @@ open Eff.Template.Equation
 
 module L = FStar.List.Tot
 
+
 (* Equation annotations in computation types *)
 
 let equations ops = list (template_equation ops)
@@ -147,13 +148,11 @@ let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type)
   = match eqs with
     | [] -> unit
     | eq :: [] -> 
-        (unit -> Pure unit 
-                     (requires (norm eff_norm_steps (to_respects_hypotheses a eqs'))) 
-                     (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
+        (unit -> Lemma (requires ((to_respects_hypotheses a eqs'))) 
+                      (ensures  ((eq_to_prop (to_inst_equation eq h)))))
     | eq :: eq' :: eqs'' -> 
-        (unit -> Pure unit 
-                     (requires (norm eff_norm_steps (to_respects_hypotheses a eqs'))) 
-                     (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
+        (unit -> Lemma (requires ((to_respects_hypotheses a eqs'))) 
+                      (ensures  ((eq_to_prop (to_inst_equation eq h)))))
         *
         eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
@@ -183,11 +182,11 @@ let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type)
   = match eqs with
     | [] -> unit
     | eq :: [] ->
-        (unit -> Pure unit (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
-                          (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
+        (unit -> Lemma (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                      (ensures  (norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
     | eq :: eq' :: eqs'' -> 
-        (unit -> Pure unit (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
-                          (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
+        (unit -> Lemma (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                      (ensures  (norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
         *
         handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
