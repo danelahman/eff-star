@@ -119,6 +119,11 @@ let perform #ops #eqs (op:op{op `mem` ops}) (x:param_of op)
   = Eff?.perform op x
 
 
+(* Normalisatin steps used to compute handler types *)
+
+let eff_norm_steps = [delta;zeta;primops;simplify;iota]
+
+
 (* Effect handlers (on Eff effect representations) *)
 
 let eff_handler_raw (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') 
@@ -133,25 +138,29 @@ let rec to_respects_hypotheses a #ops (eqs:equations ops)
       /\
       to_respects_hypotheses a eqs'
 
-let eff_norm_steps = [delta;zeta;primops;simplify;iota]
+let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
+  (ops':sig) (eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') 
+  : Type 
+  = match eqs with
+    | [] -> unit
+    | eq :: [] -> 
+        (unit -> Pure unit
+                (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
+    | eq :: eq' :: eqs'' -> 
+        (unit -> Pure unit
+                (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
+        *
+        eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
-let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') =
-  match eqs with
-  | [] -> unit
-  | eq :: eqs'' -> 
-      (unit -> Pure unit
-              (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
-              (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq h)))))
-      *
-      eff_handler_respects ops eqs'' a ops' eqs' h
-
-let eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops')
-  = h:eff_handler_raw ops eqs a ops' eqs'
-    & 
-    eff_handler_respects ops eqs a ops' eqs' h
+noeq type eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
+  eff_op_cases : eff_handler_raw ops eqs a ops' eqs';
+  eff_respects : eff_handler_respects ops eqs a ops' eqs' eff_op_cases
+}
 
 
-(* Effect handlers (on the Eff effect) *)
+(* Effect handlers *)
 
 let handler_raw (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') 
   = op:op{op `mem` ops} -> param_of op -> (arity_of op -> Eff a ops' eqs') -> Eff a ops' eqs'
@@ -159,26 +168,32 @@ let handler_raw (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equation
 let reflect_cont #a #b #ops #eqs (k:b -> eff a ops eqs) (y:b) : Eff a ops eqs
   = Eff?.reflect (k y)
 
-let to_eff_handler #ops #eqs #a #ops' #eqs'
+let to_eff_handler_raw #ops #eqs #a #ops' #eqs'
   (h:handler_raw ops eqs a ops' eqs')
   : eff_handler_raw ops eqs a ops' eqs'
   = fun op x k ->  
       (reify (h op x (reflect_cont k))) 
 
-let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') (h:handler_raw ops eqs a ops' eqs') =
-  match eqs with
-  | [] -> unit
-  | eq :: eqs'' -> 
-      (unit -> Pure unit
-              (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
-              (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler h))))))
-      *
-      handler_respects ops eqs'' a ops' eqs' h
+let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
+  (ops':sig) (eqs':equations ops') (h:handler_raw ops eqs a ops' eqs') 
+  : Type 
+  = match eqs with
+    | [] -> unit
+    | eq :: [] ->
+        (unit -> Pure unit
+                (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
+    | eq :: eq' :: eqs'' -> 
+        (unit -> Pure unit
+                (requires (norm eff_norm_steps (to_respects_hypotheses a eqs')))
+                (ensures  (fun _ -> norm eff_norm_steps (eq_to_prop (to_inst_equation eq (to_eff_handler_raw h))))))
+        *
+        handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
-let handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops')
-  = h:handler_raw ops eqs a ops' eqs'
-    & 
-    handler_respects ops eqs a ops' eqs' h
+noeq type handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
+  op_cases : handler_raw ops eqs a ops' eqs';
+  respects : handler_respects ops eqs a ops' eqs' op_cases
+}
 
 
 

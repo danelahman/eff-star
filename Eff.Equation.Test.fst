@@ -74,34 +74,44 @@ let st_eq : template_equation rw
 
 assume val a : Type
 
-let h1_raw : eff_handler_raw rw [] a rw []
-  = fun op x k -> T.Node op x k
+let h1 : eff_handler rw [] a rw [] = {
+  eff_op_cases = (fun op x k -> T.Node op x k);
+  eff_respects = ()
+}
 
-let h1 : eff_handler rw [] a rw []
-  = (| h1_raw , () |)
+let h2 : eff_handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> T.Node op x k);
+  eff_respects = ()
+}
 
-let h2_raw : eff_handler_raw rw [] a rw [st_eq3]
-  = fun op x k -> T.Node op x k
+let h3 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> T.Node op x k);
+  eff_respects = (fun () -> ())
+}
 
-let h2 : eff_handler rw [] a rw [st_eq3]
-  = (| h2_raw , () |)
+let h4 : eff_handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> T.Node op x k);
+  eff_respects = (fun () -> ()) , (fun () -> ())
+}
 
-let h3_raw : eff_handler_raw rw [] a rw [st_eq2]
-  = fun op x k -> T.Node op x k
+let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> 
+                    match op with
+                    | read -> 
+                      T.Node read x k
+                    | write -> 
+                      T.Node write (x+1) (fun _ -> 
+                      T.Node write x k));
+  eff_respects = (fun () -> ())
+}
 
-let h3 : eff_handler rw [] a rw [st_eq2]
-  = (| h3_raw , () |)
-
-let h4_raw : eff_handler_raw rw [st_eq] a rw [st_eq3]
-  = fun op x k -> T.Node op x k
-
-let h4 : eff_handler rw [st_eq] a rw [st_eq3]
-  = (| h4_raw , ((fun _ -> ()) , ()) |)
-
-let h5_raw : eff_handler_raw rw [st_eq;st_eq] a rw [st_eq3]
-  = fun op x k -> T.Node op x k
-
-let h5 : eff_handler rw [st_eq;st_eq] a rw [st_eq3]
-  = (| h5_raw , ((fun () -> ()) , 
-                ((fun () -> ()) , 
-                 ())) |)
+let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> 
+                    match op with
+                    | read -> 
+                      T.Node read x k
+                    | write -> 
+                      T.Node write (x+1) (fun _ -> 
+                      T.Node write x k));
+  eff_respects = (fun () -> ()) , ((fun () -> ()), (fun () -> ()))
+}
