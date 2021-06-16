@@ -116,6 +116,10 @@ let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_respects = () , ((), ())
 }
 
+
+
+(* ******* *)
+
 let h7 : eff_handler rw [st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> 
                     match op with
@@ -128,6 +132,20 @@ let h7 : eff_handler rw [st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
 }
 
 
+module TT = FStar.Tactics
+
+let h7' ()
+  : squash (norm eff_norm_steps (to_respects_hypotheses a [st_eq1;st_eq2;st_eq3])
+            ==>
+            norm eff_norm_steps (eq_to_prop (to_inst_equation #a #rw #rw st_eq3 (
+              (fun op x k -> 
+                 match op with
+                 | read -> 
+                    T.Node read x k
+                 | write -> 
+                    T.Node read () (fun y -> 
+                    T.Node write (x + y) k)))))) by (TT.norm []; TT.dump "foo")
+   = ()
 
 (*
 
@@ -156,5 +174,21 @@ read (y . write (x' + y) z)
 =def=
 
 write x' z
+
+*)
+
+let h8 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> 
+                    match op with
+                    | read -> 
+                      T.Node read x k
+                    | write -> 
+                      T.Node write 42 k);
+  eff_respects = () , ((), ())
+}
+
+(*
+
+Again, why does F*/SMT think this is a correct handler?
 
 *)
