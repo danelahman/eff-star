@@ -125,26 +125,42 @@ let perform #ops #eqs (op:op{op `mem` ops}) (x:param_of op)
 let eff_norm_steps = [delta;zeta;primops;simplify;iota]
 
 
-(* Hypotheses for proving handler correctness *)
-
-let rec to_respects_hypotheses a #ops (eqs':equations ops) 
-  : Type0
-  = match eqs' with
-    | [] -> True
-    | eq :: eqs'' ->
-      eq_to_prop (to_inst_equation eq (T.id_template_handler a ops))
-      /\
-      to_respects_hypotheses a eqs''
-
-
 (* Effect handlers (on Eff effect representations) *)
 
 let eff_handler_raw (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') 
   = op:op{op `mem` ops} -> param_of op -> (arity_of op -> eff a ops' eqs') -> eff a ops' eqs'
 
-let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
+let rec to_respects_hypotheses a #ops' (eqs':equations ops') 
+  : Type0
+  = match eqs' with
+    | [] -> True
+    | eq :: eqs'' ->
+      eq_to_prop (to_inst_equation eq (T.id_template_handler a ops'))
+      /\
+      to_respects_hypotheses a eqs''
+
+let rec to_respects_conclusion (#ops:sig) (#eqs:equations ops) (#a:Type) 
+  (#ops':sig) (#eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') 
+  : Type0
+  = match eqs with
+    | [] -> True
+    | eq :: eqs'' ->
+      eq_to_prop (to_inst_equation eq h)
+      /\
+      to_respects_conclusion #ops #eqs'' h
+
+let eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
   (ops':sig) (eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') 
   : Type 
+  = squash (to_respects_hypotheses a eqs'
+            ==>
+            to_respects_conclusion h)
+
+(*
+    unit -> Lemma (requires (to_respects_hypotheses a eqs'))
+                 (ensures  (to_respects_conclusion h))
+*)
+(*
   = match eqs with
     | [] -> unit
     | eq :: [] -> 
@@ -155,6 +171,7 @@ let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type)
                       (ensures  (eq_to_prop (to_inst_equation eq h))))
         *
         eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
+*)
 
 noeq type eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
   eff_op_cases : eff_handler_raw ops eqs a ops' eqs';

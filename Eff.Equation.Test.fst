@@ -77,14 +77,28 @@ module TT = FStar.Tactics
 
 assume val a : Type
 
+let h1_op_cases : eff_handler_raw rw [] a rw []
+ = fun op x k -> T.Node op x k
+
+let h1_respects 
+ : eff_handler_respects rw [] a rw [] h1_op_cases
+ = ()
+
 let h1 : eff_handler rw [] a rw [] = {
-  eff_op_cases = (fun op x k -> T.Node op x k);
-  eff_respects = ()
+  eff_op_cases = h1_op_cases;
+  eff_respects = h1_respects
 }
 
+let h2_op_cases : eff_handler_raw rw [] a rw [st_eq1;st_eq2;st_eq3]
+ = fun op x k -> T.Node op x k
+
+let h2_respects 
+ : eff_handler_respects rw [] a rw [st_eq1;st_eq2;st_eq3] h2_op_cases
+ = ()
+
 let h2 : eff_handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
-  eff_op_cases = (fun op x k -> T.Node op x k);
-  eff_respects = ()
+  eff_op_cases = h2_op_cases;
+  eff_respects = h2_respects
 }
 
 let h3_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
@@ -92,14 +106,17 @@ let h3_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
 
 let h3_respects ()
  : Tot (eff_handler_respects rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] h3_op_cases)
-     by (TT.norm eff_norm_steps; let _ = TT.l_intros () in TT.smt ())
- = fun () -> ()
+     by (TT.norm eff_norm_steps;
+         let _ = TT.l_intros () in
+         TT.smt ())
+ = ()
 
 let h3 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h3_op_cases;
   eff_respects = h3_respects ()
 }
 
+(*
 let h4_op_cases : eff_handler_raw rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> T.Node op x k
 
@@ -138,7 +155,7 @@ let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_respects = h5_respects ()
 }
 
-let h6_op_cases : eff_handler_raw rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3]
+let h6_op_cases : eff_handler_raw rw [st_eq3;st_eq1;st_eq2] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> 
      match op with
      | read -> 
@@ -148,14 +165,44 @@ let h6_op_cases : eff_handler_raw rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;
          T.Node write x k)
 
 let h6_respects ()
- : Tot (eff_handler_respects rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] h6_op_cases)
+ : Tot (eff_handler_respects rw [st_eq3;st_eq1;st_eq2] a rw [st_eq1;st_eq2;st_eq3] h6_op_cases)
      by (TT.norm eff_norm_steps)
  = (fun () -> ()) , ((fun () -> ()), (fun () -> ()))
 
-let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
+let h6 : eff_handler rw [st_eq3;st_eq1;st_eq2] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h6_op_cases;
   eff_respects = h6_respects ()
 }
+
+(* ************************** *)
+
+
+let st_eq' : template_equation rw
+  = {
+      tvctx = [int];
+      tcctx = [unit];
+      tlhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y -> T.Leaf (cvar 0 y)));
+      trhs  = (fun vvars -> T.Node write (vvar vvars 0) (fun y -> T.Leaf (cvar 0 y)))
+    }
+
+let h7_op_cases : eff_handler_raw rw [st_eq';st_eq';st_eq'] a rw [st_eq1;st_eq2;st_eq3]
+ = fun op x k -> 
+     match op with
+     | read -> 
+         T.Node read x k
+     | write -> 
+         T.Node write (x + 1) (fun _ -> 
+         T.Node write x k)
+
+let h7_respects ()
+ : Tot (eff_handler_respects rw [st_eq';st_eq';st_eq'] a rw [st_eq1;st_eq2;st_eq3] h7_op_cases)
+     by (TT.norm eff_norm_steps)
+ = (fun () -> ()) , ((fun () -> ()), (fun () -> ()))
+*)
+
+
+(* ************************** *)
+
 
 
 
