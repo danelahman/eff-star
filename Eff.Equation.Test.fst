@@ -77,25 +77,27 @@ module TT = FStar.Tactics
 
 assume val a : Type
 
+#set-options "--z3rlimit_factor 10"
 
-let h6_op_cases : eff_handler_raw rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3]
+let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> 
      match op with
-     | read -> 
+     | Op "read" -> 
          T.Node read x k
-     | write -> 
+     | Op "write" -> 
          T.Node write 42 (fun _ -> 
          T.Node write x k)
 
-let h6_respects ()
- : Tot (eff_handler_respects rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] h6_op_cases)
+let h5_respects ()
+ : Tot (eff_handler_respects rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] h5_op_cases)
      by (respects_tac (); TT.dump "foo")
  = ()
 
-let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
-  eff_op_cases = h6_op_cases;
-  eff_respects = h6_respects ()
+let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = h5_op_cases;
+  eff_respects = h5_respects ()
 }
+
 
 
 let h1_op_cases : eff_handler_raw rw [] a rw []
@@ -154,23 +156,23 @@ let h4 : eff_handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
 }
 
 
-let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
+let h6_op_cases : eff_handler_raw rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> 
      match op with
-     | read -> 
+     | Op "read" -> 
          T.Node read x k
-     | write -> 
-         T.Node write (x + 1) (fun _ -> 
+     | Op "write" -> 
+         T.Node write 42 (fun _ -> 
          T.Node write x k)
 
-let h5_respects ()
- : Tot (eff_handler_respects rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] h5_op_cases)
-     by (respects_tac ())
+let h6_respects ()
+ : Tot (eff_handler_respects rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] h6_op_cases)
+     by (respects_tac (); TT.dump "foo")
  = ()
 
-let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
-  eff_op_cases = h5_op_cases;
-  eff_respects = h5_respects ()
+let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = h6_op_cases;
+  eff_respects = h6_respects ()
 }
 
 
