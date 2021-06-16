@@ -3,7 +3,7 @@ module Eff.Template.Equiv
 open Eff.Signature
 open Eff.Template
 
-val equiv (#a:Type) (#ops:sig) (t1 t2:template a ops) : prop
+val equiv (#a:Type) (#ops:sig) (t1 t2:template a ops) : Type0
 
 val refl (#a:Type) (#ops:sig) (t:template a ops)
   : Lemma (t `equiv` t)

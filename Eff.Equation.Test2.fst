@@ -87,28 +87,12 @@ let h2 : handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
 
 let h3 : handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   op_cases = (fun op x k -> let y = perform op x in k y);
-  respects = (fun () -> ())
+  respects = ()
 }
-
-let h4 : handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
-  op_cases = (fun op x k -> let y = perform op x in k y);
-  respects = (fun () -> ()) , (fun () -> ())
-}
-
-
 
 (*
-let h4_raw : handler_raw rw [st_eq] a rw [st_eq3]
-  = fun op x k -> let y = perform op x in k y
-
-let h4 : handler rw [st_eq] a rw [st_eq3]
-  = (| h4_raw , ((fun _ -> ()) , ()) |)
-
-let h5_raw : handler_raw rw [st_eq;st_eq] a rw [st_eq3]
-  = fun op x k -> let y = perform op x in k y
-
-let h5 : handler rw [st_eq;st_eq] a rw [st_eq3]
-  = (| h5_raw , ((fun () -> ()) , 
-                ((fun () -> ()) , 
-                 ())) |)
+let h4 : handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
+  op_cases = (fun op x k -> let y = perform op x in k y);
+  respects = () , ()
+}
 *)

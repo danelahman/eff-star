@@ -86,12 +86,12 @@ let h2 : eff_handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
 
 let h3 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> T.Node op x k);
-  eff_respects = (fun () -> ())
+  eff_respects = ()
 }
 
 let h4 : eff_handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = (fun op x k -> T.Node op x k);
-  eff_respects = (fun () -> ()) , (fun () -> ())
+  eff_respects = () , ()
 }
 
 let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
@@ -102,7 +102,7 @@ let h5 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
                     | write -> 
                       T.Node write (x+1) (fun _ -> 
                       T.Node write x k));
-  eff_respects = (fun () -> ())
+  eff_respects = ()
 }
 
 let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
@@ -111,7 +111,50 @@ let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
                     | read -> 
                       T.Node read x k
                     | write -> 
-                      T.Node write (x+1) (fun _ -> 
+                      T.Node write (x + 42) (fun _ -> 
                       T.Node write x k));
-  eff_respects = (fun () -> ()) , ((fun () -> ()), (fun () -> ()))
+  eff_respects = () , ((), ())
 }
+
+let h7 : eff_handler rw [st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
+  eff_op_cases = (fun op x k -> 
+                    match op with
+                    | read -> 
+                      T.Node read x k
+                    | write -> 
+                      T.Node read () (fun y -> 
+                      T.Node write (x + y) k));
+  eff_respects = ()
+}
+
+
+
+(*
+
+Why does F*/SMT think that h7 is a corrrect handler???
+
+Because the following equation doesn't seem to hold:
+
+write' x (write' x' z)
+
+=def=
+
+read (y . write (x + y) (read y' . write (x' + y') z))
+
+=
+
+read (y . write (x + y) (write (x' + x + y) z))
+
+=
+
+read (y . write (x' + x + y) z)
+
+=?=
+
+read (y . write (x' + y) z)
+
+=def=
+
+write x' z
+
+*)
