@@ -79,35 +79,7 @@ assume val a : Type
 
 #set-options "--z3rlimit_factor 10"
 
-let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq3]
- = fun op x k -> 
-     match op with
-     | Op "read" -> 
-         T.Node read x k
-     | Op "write" -> 
-         T.Node write 42 (fun _ -> 
-         T.Node write x k)
-
 (*
-let val_ctx (x:int) (y:int) 
-  : vvars [int;int]
-  = [VVar x; VVar y]
-
-let comp_ctx #a (z:unit -> T.template a rw)
-  : inst_cvars [unit] a rw
-  = [ICVar z]
-
-let apply_st_eq3 #a (x:int) (y:int) (z:unit -> T.template a rw)
-  : Lemma (requires (eq_to_prop (to_inst_equation st_eq3 (T.id_template_handler a rw))))
-          (ensures  ((
-                     ((to_inst_equation st_eq3 (T.id_template_handler a rw)).ilhs (val_ctx x y) (comp_ctx z)) 
-                     `equiv` 
-                     ((to_inst_equation st_eq3 (T.id_template_handler a rw)).irhs (val_ctx x y) (comp_ctx z))
-                     )))
-      by (TT.compute ())
-  = ()
-*)
-
 let apply_st_eq3 #a (x1:int) (x2:int) (z:unit -> T.template a rw)
   : Lemma (requires (forall (x1 x2:int) (z:unit -> T.template a rw) . 
                        equiv (T.Node write x1 (fun y ->
@@ -121,6 +93,49 @@ let apply_st_eq3 #a (x1:int) (x2:int) (z:unit -> T.template a rw)
                            (T.Node write x2 (fun y ->
                             z y))))
   = ()
+*)
+
+let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq3]
+ = fun op x k -> 
+     match op with
+     | Op "read" -> 
+         T.Node read x k
+     | Op "write" -> 
+         T.Node write 42 (fun _ -> 
+         T.Node write x k)
+
+
+let val_ctx (x:int) (y:int) 
+  : vvars [int;int]
+  = [VVar x; VVar y]
+
+let comp_ctx #a (z:unit -> T.template a rw)
+  : inst_cvars [unit] a rw
+  = [ICVar z]
+
+
+let apply_st_eq3 #a (x:int) (y:int) (z:unit -> T.template a rw)
+  : Lemma (requires ((eq_to_prop (to_inst_equation st_eq3 (T.id_template_handler a rw)))))
+          (ensures  (norm [delta;zeta;iota;primops] (
+                     ((to_inst_equation st_eq3 (T.id_template_handler a rw)).ilhs (val_ctx x y) (comp_ctx z)) 
+                     `equiv` 
+                     ((to_inst_equation st_eq3 (T.id_template_handler a rw)).irhs (val_ctx x y) (comp_ctx z))
+                     )))
+      by (TT.compute ())
+  = ()
+
+(*
+let apply_st_eq3 #a (xs:vvars [int;int]) (z:unit -> T.template a rw)
+  : Lemma (requires ((eq_to_prop (to_inst_equation st_eq3 (T.id_template_handler a rw)))))
+          (ensures  (norm [delta;zeta;iota;primops] (
+                     ((to_inst_equation st_eq3 (T.id_template_handler a rw)).ilhs xs (comp_ctx z)) 
+                     `equiv` 
+                     ((to_inst_equation st_eq3 (T.id_template_handler a rw)).irhs xs (comp_ctx z))
+                     )))
+      by (TT.compute ();
+          TT.dump "foo")
+  = ()
+*)
 
 let h5_respects ()
   : Tot (eff_handler_respects rw [st_eq] a rw [st_eq3] h5_op_cases)
@@ -134,8 +149,7 @@ let h5_respects ()
                    (if (Some? (List.Tot.nth hyp_eqs 0)) then (TT.mapply (Some?.v (List.Tot.nth hyp_eqs 0))) else ()))
             (fun _ -> TT.apply_lemma (`apply_st_eq3); 
                    TT.compute ();
-                   (if (Some? (List.Tot.nth hyp_eqs 0)) then (TT.mapply (Some?.v (List.Tot.nth hyp_eqs 0))) else ()));
-          TT.dump "foo"
+                   (if (Some? (List.Tot.nth hyp_eqs 0)) then (TT.mapply (Some?.v (List.Tot.nth hyp_eqs 0))) else ()))
           )
 
 let h5 : eff_handler rw [st_eq] a rw [st_eq3] = {
