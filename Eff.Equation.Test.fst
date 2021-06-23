@@ -77,6 +77,7 @@ module TT = FStar.Tactics
 
 assume val a : Type
 
+(*
 #set-options "--z3rlimit_factor 10"
 
 let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq3]
@@ -88,8 +89,7 @@ let h5_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq3]
          T.Node write 42 (fun _ -> 
          T.Node write x k)
 
-let h5_respects ()
- : Tot (eff_handler_respects rw [st_eq] a rw [st_eq3] h5_op_cases)
+(*
      by (respects_tac () 
          (*TT.compute ();
          TT.repeat' respects_tac_split_hyp;
@@ -105,13 +105,20 @@ let h5_respects ()
          let _ = TT.l_intros () in
          TT.dump "foo";
          TT.smt ()*))
- = ()
+*)
+
+let h5_respects ()
+ : Tot (eff_handler_respects rw [st_eq] a rw [st_eq3] h5_op_cases)
+ = _ by (TT.compute ();
+         TT.repeat' respects_tac_split_hyp;
+         let _ = TT.l_intros () in
+         TT.dump "foo")
 
 let h5 : eff_handler rw [st_eq] a rw [st_eq3] = {
   eff_op_cases = h5_op_cases;
   eff_respects = h5_respects ()
 }
-
+*)
 
 
 let h1_op_cases : eff_handler_raw rw [] a rw []
@@ -119,7 +126,6 @@ let h1_op_cases : eff_handler_raw rw [] a rw []
 
 let h1_respects ()
  : Tot (eff_handler_respects rw [] a rw [] h1_op_cases)
-     by (respects_tac ())
  = ()
 
 let h1 : eff_handler rw [] a rw [] = {
@@ -133,7 +139,6 @@ let h2_op_cases : eff_handler_raw rw [] a rw [st_eq1;st_eq2;st_eq3]
 
 let h2_respects ()
  : Tot (eff_handler_respects rw [] a rw [st_eq1;st_eq2;st_eq3] h2_op_cases)
-     by (respects_tac ())
  = ()
 
 let h2 : eff_handler rw [] a rw [st_eq1;st_eq2;st_eq3] = {
@@ -147,8 +152,7 @@ let h3_op_cases : eff_handler_raw rw [st_eq] a rw [st_eq1;st_eq2;st_eq3]
 
 let h3_respects ()
  : Tot (eff_handler_respects rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] h3_op_cases)
-     by (respects_tac ())
- = ()
+ = _ by (respects_tac ())
 
 let h3 : eff_handler rw [st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h3_op_cases;
@@ -161,15 +165,15 @@ let h4_op_cases : eff_handler_raw rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3]
 
 let h4_respects ()
  : Tot (eff_handler_respects rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] h4_op_cases)
-     by (respects_tac ())
- = ()
+ = (_ by (respects_tac ())) , 
+   (_ by (respects_tac ()))
 
 let h4 : eff_handler rw [st_eq;st_eq] a rw [st_eq1;st_eq2;st_eq3] = {
   eff_op_cases = h4_op_cases;
   eff_respects = h4_respects ()
 }
 
-
+(*
 let h6_op_cases : eff_handler_raw rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3]
  = fun op x k -> 
      match op with
@@ -190,3 +194,4 @@ let h6 : eff_handler rw [st_eq1;st_eq2;st_eq3] a rw [st_eq1;st_eq2;st_eq3] = {
 }
 
 
+*)

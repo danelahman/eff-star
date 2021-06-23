@@ -134,28 +134,40 @@ let rec to_respects_hypotheses a #ops' (eqs':equations ops')
       /\
       to_respects_hypotheses a eqs''
 
-let rec to_respects_conclusion (#ops:sig) (#eqs:equations ops) (#a:Type) 
-  (#ops':sig) (#eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') 
-  : Type0
-  = match eqs with
-    | [] -> True
-    | eq :: eqs'' ->
-      eq_to_prop (to_inst_equation eq h)
-      /\
-      to_respects_conclusion #ops #eqs'' h
-
-let eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
+let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
   (ops':sig) (eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') 
   : Type 
-  = squash (to_respects_hypotheses a eqs'
-            ==>
-            to_respects_conclusion h)
+  = match eqs with
+    | [] -> unit
+    | eq :: [] ->
+        squash (to_respects_hypotheses a eqs' ==> eq_to_prop (to_inst_equation eq h))
+    | eq :: eq' :: eqs'' ->
+        squash (to_respects_hypotheses a eqs' ==> eq_to_prop (to_inst_equation eq h))
+        *
+        eff_handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
 noeq type eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
   eff_op_cases : eff_handler_raw ops eqs a ops' eqs';
   eff_respects : eff_handler_respects ops eqs a ops' eqs' eff_op_cases
 }
 
+
+(* Combining respects of two sets of equations *)
+(*
+let rec eff_combine_respects #ops #eqs1 #eqs2 #a #ops' #eqs' #op_cases
+    (r1:eff_handler_respects ops eqs1 a ops' eqs' op_cases)
+    (r2:eff_handler_respects ops eqs2 a ops' eqs' op_cases)
+  : eff_handler_respects ops (L.append eqs1 eqs2) a ops' eqs' op_cases
+  = match eqs1 with
+    | [] -> r2
+    | eq :: [] -> 
+      (match eqs2 with
+       | [] -> r1
+       | eq' :: eqs2' -> r1 , r2)
+    | eq :: eq' :: eqs1' -> 
+      (let r' =  eff_combine_respects #ops #(eq' :: eqs1') #eqs2 #a #ops' #eqs' #op_cases (admit ()) r2 in 
+       admit ())
+*)
 
 (* Effect handlers *)
 
@@ -171,12 +183,17 @@ let to_eff_handler_raw #ops #eqs #a #ops' #eqs'
   = fun op x k ->  
       (reify (h op x (reflect_cont k)))
 
-let handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
+let rec handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
   (ops':sig) (eqs':equations ops') (h:handler_raw ops eqs a ops' eqs') 
   : Type 
-  = squash (to_respects_hypotheses a eqs'
-            ==>
-            to_respects_conclusion (to_eff_handler_raw h))
+  = match eqs with
+    | [] -> unit
+    | eq :: [] ->
+        squash (to_respects_hypotheses a eqs' ==> eq_to_prop (to_inst_equation eq (to_eff_handler_raw h)))
+    | eq :: eq' :: eqs'' ->
+        squash (to_respects_hypotheses a eqs' ==> eq_to_prop (to_inst_equation eq (to_eff_handler_raw h)))
+        *
+        handler_respects ops (eq' :: eqs'') a ops' eqs' h
 
 noeq type handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':equations ops') = {
   op_cases : handler_raw ops eqs a ops' eqs';
@@ -222,5 +239,4 @@ let respects_tac ()
   = TT.compute ();
     TT.repeat' respects_tac_split_hyp;
     let _ = TT.l_intros () in
-    TT.repeat' (fun _ -> TT.split (); TT.smt ());
     TT.smt ()

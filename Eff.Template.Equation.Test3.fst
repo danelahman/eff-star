@@ -84,7 +84,7 @@ module TT = FStar.Tactics
 let foo ()
   : Lemma (requires (eq_to_prop (to_inst_equation st_eq3 (id_template_handler t rw))))
           (ensures  (eq_to_prop (to_inst_equation st_eq (id_template_handler t rw))))
-          by (TT.compute (); TT.dump "foo")
+          by (TT.compute ())
   = admit ();
     assert (forall x1 x2 x3 (z:unit -> template t rw) . 
              equiv (Node write 42 (fun _ -> 
@@ -105,3 +105,10 @@ let foo ()
 
 
 
+let bar ()
+  : Lemma (requires (forall x1 x2 (z:unit -> template t rw) .{:pattern (Node write x1 (fun y -> Node write x2 (fun y' -> z y')))} equiv (Node write x1 (fun y -> Node write x2 (fun y' -> z y'))) (Node write x2 (fun y' -> z y'))))
+          (ensures  (eq_to_prop (to_inst_equation st_eq (id_template_handler t rw))))
+          by (TT.compute ();
+              TT.norm [simplify];
+              TT.dump "bar")
+  = ()
