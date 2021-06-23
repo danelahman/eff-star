@@ -15,7 +15,7 @@ module L = FStar.List.Tot
 let vctx = list Type0
 
 noeq type vvar_t =
-  | VVar : (a:Type0) -> (x:a) -> vvar_t
+  | VVar : (#a:Type0) -> (x:a) -> vvar_t
 
 let vvars_pred (vctx:vctx) (vvars:list vvar_t)
   = L.length vctx = L.length vvars /\
@@ -76,7 +76,7 @@ let to_template_equation #ops (eq:equation ops)
 (* Intatiated template equations *)
 
 noeq type inst_cvar_t a ops =
-  | ICVar : (b:Type0) -> (z:(b -> template a ops)) -> inst_cvar_t a ops
+  | ICVar : (#b:Type0) -> (z:(b -> template a ops)) -> inst_cvar_t a ops
 
 let inst_cvars_pred (cctx:cctx) a ops (cvars:list (inst_cvar_t a ops))
   = L.length cctx = L.length cvars /\
@@ -129,12 +129,12 @@ let rec eq_to_prop #a #ops (eq:inst_equation a ops)
                 forall (z:b -> template a ops) . 
                     eq_to_prop ({ ivctx = eq.ivctx; 
                                   icctx = cctx;
-                                  ilhs  = (fun vvars rcvars -> eq.ilhs vvars (ICVar b z :: rcvars));
-                                  irhs  = (fun vvars rcvars -> eq.irhs vvars (ICVar b z :: rcvars)) }))
+                                  ilhs  = (fun vvars rcvars -> eq.ilhs vvars (ICVar z :: rcvars));
+                                  irhs  = (fun vvars rcvars -> eq.irhs vvars (ICVar z :: rcvars)) }))
     | b :: vctx -> 
         forall (x:b) . 
             eq_to_prop ({ ivctx = vctx; 
                           icctx = eq.icctx;
-                          ilhs  = (fun vvars rcvars -> eq.ilhs (VVar b x :: vvars) rcvars);
-                          irhs  = (fun vvars rcvars -> eq.irhs (VVar b x :: vvars) rcvars) })
+                          ilhs  = (fun vvars rcvars -> eq.ilhs (VVar x :: vvars) rcvars);
+                          irhs  = (fun vvars rcvars -> eq.irhs (VVar x :: vvars) rcvars) })
 

@@ -136,7 +136,7 @@ let rec to_respects_hypotheses a #ops' (eqs':equations ops')
 
 let rec eff_handler_respects (ops:sig) (eqs:equations ops) (a:Type) 
   (ops':sig) (eqs':equations ops') (h:eff_handler_raw ops eqs a ops' eqs') 
-  : Type 
+  : Type0 
   = match eqs with
     | [] -> unit
     | eq :: [] ->
@@ -152,12 +152,13 @@ noeq type eff_handler (ops:sig) (eqs:equations ops) (a:Type) (ops':sig) (eqs':eq
 }
 
 
-(* Combining respects of two sets of equations *)
 (*
+(* Combining respects of two sets of equations *)
+
 let rec eff_combine_respects #ops #eqs1 #eqs2 #a #ops' #eqs' #op_cases
     (r1:eff_handler_respects ops eqs1 a ops' eqs' op_cases)
     (r2:eff_handler_respects ops eqs2 a ops' eqs' op_cases)
-  : eff_handler_respects ops (L.append eqs1 eqs2) a ops' eqs' op_cases
+  : eff_handler_respects ops (eqs1 @ eqs2) a ops' eqs' op_cases
   = match eqs1 with
     | [] -> r2
     | eq :: [] -> 
@@ -165,9 +166,12 @@ let rec eff_combine_respects #ops #eqs1 #eqs2 #a #ops' #eqs' #op_cases
        | [] -> r1
        | eq' :: eqs2' -> r1 , r2)
     | eq :: eq' :: eqs1' -> 
-      (let r' =  eff_combine_respects #ops #(eq' :: eqs1') #eqs2 #a #ops' #eqs' #op_cases (admit ()) r2 in 
-       admit ())
-*)
+      assert (eqs1 == eq :: eq' :: eqs1');
+      assert (eqs1 @ eqs2 == eq :: eq' :: (eqs1' @ eqs2));
+      match r1 with
+      | r , r1' -> admit ()
+*)      
+
 
 (* Effect handlers *)
 
@@ -227,16 +231,35 @@ let handle #a #b #ops #ops' #eqs #eqs'
 module TT = FStar.Tactics
 
 let respects_tac_split_hyp ()
-  : TT.Tac unit
+  : TT.Tac Reflection.Types.binder
   = let hyp = TT.implies_intro () in
     TT.and_elim (TT.pack (TT.Tv_Var (TT.bv_of_binder hyp)));
     TT.clear hyp;
-    let _ = TT.implies_intro () in
-    ()
+    let hyp_eq = TT.implies_intro () in
+    hyp_eq
 
 let respects_tac ()
-  : TT.Tac unit
+  : TT.Tac (list Reflection.Types.binder)
   = TT.compute ();
-    TT.repeat' respects_tac_split_hyp;
+    let hyp_eqs = TT.repeat respects_tac_split_hyp in
     let _ = TT.l_intros () in
+    hyp_eqs
+
+let respects_tac_smt ()
+  : TT.Tac unit
+  = let _ = respects_tac () in
     TT.smt ()
+
+let respects_op_cong ()
+  : TT.Tac unit
+  = TT.mapply (`Eff.Template.Equiv.op_cong);
+    let _ = TT.forall_intro () in
+    ()
+
+let respects_trans (t1 t2:unit -> TT.Tac unit)
+  :  TT.Tac unit
+  =  TT.mapply (`Eff.Template.Equiv.trans);
+     TT.later ();
+     TT.split ();
+     t1 ();
+     t2 ()
